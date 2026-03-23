@@ -69,6 +69,10 @@ class Automessage():
             self._threadControl.stop = True;
     
     def SendAutoMessage(self):
+        # Don't use bandwidth if no one is online
+        if len(self._serverData.API.GetAllClients()) == 0:
+            return
+            
         messages = self.config.cfg['messages']
         if len(messages) == 0:
             message = "Error: No messages configured in automessageCfg.json"
