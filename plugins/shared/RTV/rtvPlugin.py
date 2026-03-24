@@ -175,9 +175,11 @@ CONFIG_FALLBACK = '''{
 try:
     if os.path.exists(DEFAULT_CFG_YAML):
         DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_YAML, CONFIG_FALLBACK)
+        DEFAULT_CFG_PATH = DEFAULT_CFG_YAML
         Log.info(f"Loaded configuration from YAML file: {DEFAULT_CFG_YAML}")
     elif os.path.exists(DEFAULT_CFG_JSON):
         DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_JSON, CONFIG_FALLBACK)
+        DEFAULT_CFG_PATH = DEFAULT_CFG_JSON
         Log.info(f"Loaded configuration from JSON file: {DEFAULT_CFG_JSON}")
     else:
         # If neither file exists, create a default YAML config
