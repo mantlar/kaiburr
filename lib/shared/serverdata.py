@@ -7,11 +7,12 @@ import godfingerinterface;
 
 class ServerData():
 
-    def __init__(self, pk3mngr : pk3.Pk3Manager, cvarManager : cvar.CvarManager, API : godfingerAPI.API, iface : godfingerinterface.IServerInterface, args):
+    def __init__(self, pk3mngr : pk3.Pk3Manager, cvarManager : cvar.CvarManager, API : godfingerAPI.API, iface : godfingerinterface.IServerInterface, args, mbiiPath=""):
         self.pk3Manager = pk3mngr;
         self.cvarManager = cvarManager;
         self.API = API;
         self.args = args;
+        self.mbiiPath = mbiiPath;
         self.lock = threading.Lock()
         self.serverVars = {}
         # self.rcon = rcon;
