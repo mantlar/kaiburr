@@ -361,7 +361,7 @@ class MBIIServer:
         exportAPI.GetDatabase       = self.API_GetDatabase
         exportAPI.GetPlugin         = self.API_GetPlugin
         exportAPI.Restart           = self.Restart
-        self._serverData = serverdata.ServerData(self._pk3Manager, self._cvarManager, exportAPI, self._primarySvInterface, Args) # Use primary interface
+        self._serverData = serverdata.ServerData(self._pk3Manager, self._cvarManager, exportAPI, self._primarySvInterface, Args, self._config.cfg.get("MBIIPath", "")) # Use primary interface
         extralives_path = os.path.join(os.path.dirname(__file__), "data", "extralives.json")
         try:
             with open(extralives_path, "r") as f:
