@@ -1505,7 +1505,8 @@ def InitLogger():
     if Args.logfile:
         # Add timestamp to log file so they don't get overwritten
         if os.path.exists(Args.logfile):
-            newLogfile = Args.logfile + '-' + time.strftime("%m%d%Y_%H%M%S", time.localtime(time.time()))
+            base, ext = os.path.splitext(Args.logfile)
+            newLogfile = base + '-' + time.strftime("%m%d%Y_%H%M%S", time.localtime(time.time())) + ext
             Args.logfile = newLogfile
         else:
             newLogfile = Args.logfile
