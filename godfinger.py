@@ -763,6 +763,9 @@ class MBIIServer:
                 self.OnClientUserInfoChanged(message)
             elif line.endswith(") completed the objective!"):
                 self.OnObjective(message)
+            elif "roundwinner:" in line.lower():
+                Log.debug("RoundWinner log entry parsed: %s", message.content)
+                self.OnRoundWinner(message)
             else:
                 return
 
@@ -777,6 +780,12 @@ class MBIIServer:
         if len(parts) > 1:
             message : str = parts[1].strip()
             self._pluginManager.Event( godfingerEvent.ServerSayEvent( message, isStartup = logMessage.isStartup ) )
+
+    def OnRoundWinner(self, logMessage : logMessage.LogMessage):
+        lineParse = logMessage.content.split()
+        if len(lineParse) > 1:
+            winner_team = lineParse[1]
+            self._pluginManager.Event(godfingerEvent.RoundWinnerEvent(winner_team, isStartup=logMessage.isStartup))
 
     def OnChatMessage(self, logMessage : logMessage.LogMessage):
         messageRaw = logMessage.content

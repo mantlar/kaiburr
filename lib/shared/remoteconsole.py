@@ -9,6 +9,32 @@ from lib.shared.colors import StripColorCodes
 
 Log = logging.getLogger(__name__)
 
+def sanitize_str(value, keep_semicolons=False) -> str:
+    """Sanitize a string for safe transmission to the game server console.
+    Replaces consecutive slashes (//) and block comments (/*) to prevent comment truncation,
+    removes/replaces command separators like semicolons (;) and newlines (\\r, \\n) to prevent command injection,
+    and replaces double quotes (") with single quotes (') to prevent quote mismatches."""
+    if isinstance(value, bytes):
+        value = value.decode("UTF-8", errors="ignore")
+    else:
+        value = str(value)
+    
+    # 1. Prevent block comment truncation: /* -> / *
+    while "/*" in value:
+        value = value.replace("/*", "/ *")
+        
+    # 2. Prevent line comment truncation: // -> / /
+    while "//" in value:
+        value = value.replace("//", "/ /")
+        
+    # 3. Prevent command splitting via newlines/carriage returns: replace with space
+    value = value.replace("\n", " ").replace("\r", " ")
+    
+    return value
+
+def sanitize(value, keep_semicolons=False) -> bytes:
+    return bytes(sanitize_str(value, keep_semicolons), "UTF-8")
+
 class RCON(object):
     def __init__(self, address, bindAddr, password):
         self._address = address;
@@ -119,7 +145,7 @@ class RCON(object):
         return False;
 
     # waits for response, ensures delivery
-    def Request(self, payload, responseSize = 4096, timeout = 1, responseParser = None ) -> bytes:
+    def Request(self, payload, responseSize = 4096, timeout = 1, responseParser = None, tryAgain: bool = True) -> bytes:
         if self.IsOpened():
             #print("Request with payload %s"%payload);
             result = b'';
@@ -133,9 +159,13 @@ class RCON(object):
                     try:
                         self._Send(payload);
                         if not self._ReadResponse(responseSize, timeout):
-                            Log.warn(f'Message with payload {str(payload)} not received after {timeout} seconds, will attempt to resend.')
-                            timeout *= 2;
-                            continue;
+                            if tryAgain:
+                                Log.warn(f'Message with payload {str(payload)} not received after {timeout} seconds, will attempt to resend.')
+                                timeout *= 2;
+                                continue;
+                            else:
+                                Log.error(f'Message with payload {str(payload)} not received after {timeout} seconds. Not attempting to resend.')
+                                break;
                         else:
                             result = self._PopUnread();
                             #print("Result from request %s"%result);
@@ -151,43 +181,36 @@ class RCON(object):
     def IsOpened(self)->bool:
         return self._isOpened;
 
-    def SvSay(self, msg):
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
+    def SvSay(self, msg, tryAgain: bool = False):
+        msg = sanitize(msg)
         if len(msg) > 138: # Message is too big for "svsay".
                         # Use "say" instead.
-            return self.Say(msg)
+            return self.Say(msg, tryAgain=tryAgain)
         else:
-            return self.Request(b"\xff\xff\xff\xffrcon %b svsay %b" % (self._password, msg));
+            return self.Request(b"\xff\xff\xff\xffrcon %b svsay %b" % (self._password, msg), tryAgain=tryAgain);
 
-    def Say(self, msg):
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
-        return self.Request(b"\xff\xff\xff\xffrcon %b say %b" % (self._password, msg));
+    def Say(self, msg, tryAgain: bool = False):
+        msg = sanitize(msg)
+        return self.Request(b"\xff\xff\xff\xffrcon %b say %b" % (self._password, msg), tryAgain=tryAgain);
 
     def SvTell(self, clientId, msg):
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
-        if not type(clientId) == bytes:
-            clientId = str(clientId)
-            clientId = bytes(clientId, "UTF-8")
+        msg = sanitize(msg)
+        clientId = sanitize(clientId)
         return self.Request(b"\xff\xff\xff\xffrcon %b svtell %b %b" % (self._password, clientId, msg));
 
     def MbMode(self, cmd, mapToChange=None):
         """ Changes to the given MbMode (0 = Open, 1 = Semi Authentic, 2 = Full Authentic, 3 = Duel, 4 = Legends). If mapToChange is provided, also changes to that map. """
         if mapToChange == None:
             mapToChange = b""
-        if not type(mapToChange) == bytes and mapToChange != b"":
-            mapToChange = bytes(mapToChange, "UTF-8")
+        else:
+            mapToChange = sanitize(mapToChange)
         return self.Request(b"\xff\xff\xff\xffrcon %b mbmode %i %b" % (self._password, cmd, mapToChange))
     
     def ClientMute(self, player_id : int, minutes : int = 10):
         """ Mutes the client with the given ID for the given number of minutes, or 10 minutes if no duration is given. The number of minutes must be between 1-60, inclusive. """
         if 0 < minutes <= 60:   # rcon mute must be between
-            if not type(player_id) == bytes:
-                player_id = bytes(str(player_id), "UTF-8")
-            if not type(minutes) == bytes:
-                minutes = bytes(str(minutes), "UTF-8")
+            player_id = sanitize(player_id)
+            minutes = sanitize(minutes)
             return self.Request(b"\xff\xff\xff\xffrcon %b mute %b %b" % (self._password, player_id, minutes))
         return None
   
@@ -196,14 +219,12 @@ class RCON(object):
 
     # untested
     def ClientBan(self, player_ip):
-        if not type(player_ip) == bytes:
-            player_ip = bytes(player_ip, "UTF-8")
+        player_ip = sanitize(player_ip)
         return self.Request(b"\xff\xff\xff\xffrcon %b addip %b" % (self._password, player_ip))
     
     # untested
     def ClientUnban(self, player_ip):
-        if not type(player_ip) == bytes:
-            player_ip = bytes(player_ip, "UTF-8")
+        player_ip = sanitize(player_ip)
         return self.Request(b"\xff\xff\xff\xffrcon %b removeip %b" % (self._password, player_ip))
 
 
@@ -211,53 +232,47 @@ class RCON(object):
         return self.Request(b"\xff\xff\xff\xffrcon %b clientkick %i" % (self._password, player_id))
 
     def Tempban(self, player_name, rounds):
-        name = bytes(player_name, "UTF-8")
+        name = sanitize(player_name)
         return self.Request(b"\xff\xff\xff\xffrcon %b tempban \"%b\" %i" % (self._password, name, rounds))
 
     def Echo(self, msg):
-        msg = bytes(msg, "UTF-8")
+        msg = sanitize(msg)
         return self.Request(b"\xff\xff\xff\xffrcon %b echo %b" % (self._password, msg))
 
     def SetTeam1(self, team):
-        team = team.encode()
+        team = sanitize(team)
         return self.Request(b"\xff\xff\xff\xffrcon %b g_siegeteam1 \"%b\"" % (self._password, team))
 
     def SetTeam2(self, team):
-        team = team.encode()
+        team = sanitize(team)
         return self.Request(b"\xff\xff\xff\xffrcon %b g_siegeteam2 \"%b\"" % (self._password, team))
     
     # R20.1.01 
     def SvSound(self, soundName : str) -> bytes:     
-        if not type(soundName) == bytes:
-            soundName = soundName.encode()
+        soundName = sanitize(soundName)
         return self.Request(b"\xff\xff\xff\xffrcon %b snd \"%s\"" % (self._password, soundName))
     
     # R20.1.01 
     def TeamSound(self, soundName : str, teamId : int) -> bytes:
-        if not type(soundName) == bytes:
-            soundName = soundName.encode()
+        soundName = sanitize(soundName)
         if not type(teamId) == int:
             teamId = int(teamId)
         return self.Request(b"\xff\xff\xff\xffrcon %b sndTeam %i \"%s\"" % (self._password, teamId, soundName))
     
     # R20.1.01 
     def ClientSound(self, soundName : str, clientId : int) -> bytes:
-        if not type(soundName) == bytes:
-            soundName = soundName.encode()
+        soundName = sanitize(soundName)
         if not type(clientId) == int:
             clientId = int(clientId)
         return self.Request(b"\xff\xff\xff\xffrcon %b sndClient %i \"%s\"" % (self._password, clientId, soundName))
 
     def SetCvar(self, cvar, val):
-        if not type(cvar) == bytes:
-            cvar = bytes(cvar, "UTF-8")
-        if not type(val) == bytes:
-            val = bytes(val, "UTF-8")
+        cvar = sanitize(cvar)
+        val = sanitize(val, keep_semicolons=True)
         return self.Request(b'\xff\xff\xff\xffrcon %b set %b \"%b\"' % (self._password, cvar, val))
 
     def GetCvar(self, cvar):
-        if not type(cvar) == bytes:
-            cvar = bytes(cvar, "UTF-8")
+        cvar = sanitize(cvar)
         response = self.Request(b"\xff\xff\xff\xffrcon %b set %b" % (self._password, cvar))
         if response != None and len(response) > 0:
             response = response.decode("UTF-8", errors="ignore")
@@ -270,15 +285,12 @@ class RCON(object):
         return response
 
     def SetVstr(self, vstr, val):
-        if not type(vstr) == bytes:
-            vstr = bytes(vstr, "UTF-8")
-        if not type(val) == bytes:
-            val = bytes(val, "UTF-8")
+        vstr = sanitize(vstr)
+        val = sanitize(val, keep_semicolons=True)
         return self.Request(b"\xff\xff\xff\xffrcon %b set %b \"%b\"" % (self._password, vstr, val))
 
     def ExecVstr(self, vstr):
-        if not type(vstr) == bytes:
-            vstr = bytes(vstr, "UTF-8") 
+        vstr = sanitize(vstr)
         return self.Request(b"\xff\xff\xff\xffrcon %b vstr %b" % (self._password, vstr))
 
     def GetTeam1(self):
@@ -306,8 +318,7 @@ class RCON(object):
 
     def MapReload(self, mapName):
         """ USE THIS """
-        if not type(mapName) == bytes:
-            mapName = bytes(mapName, "UTF-8")
+        mapName = sanitize(mapName)
         response =  self.Request(b"\xff\xff\xff\xffrcon %b map %b" % (self._password, mapName), 1024*32, 120, self._MapReloadParser);
         time.sleep(5); # man, this is hard, 5 just in case, we cant be sure when it ends because there is no strict protocol
         #self._ClearInputSocket();
@@ -334,8 +345,7 @@ class RCON(object):
         return res
     
     def DumpUser(self, user_id) -> str:
-        if not type(user_id) == bytes:
-            user_id = bytes(str(user_id), "UTF-8") 
+        user_id = sanitize(user_id)
         res = self.Request(b"\xff\xff\xff\xffrcon %b dumpuser %b" % (self._password, user_id));
         if res != None and len(res) > 0:
             res = res.decode("UTF-8", "ignore");
@@ -354,8 +364,7 @@ class RCON(object):
         return res
     
     def TeamSay(self, players, team, vstrStorage, msg, sleepBetweenChunks=0):
-        # if not type(msg) == bytes:
-        #   msg = bytes(msg, "UTF-8")
+        msg = sanitize_str(msg)
         toExecute = []
         for p in players:
             if p.GetTeamId() == team:
@@ -384,10 +393,9 @@ class RCON(object):
             self.SetVstr(vstrStorage, payload)
             self.ExecVstr(vstrStorage)
 
-    def SmSay(self, msg : str):
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
-        return self.Request(b"\xff\xff\xff\xffrcon %b smsay %s" % (self._password, msg));
+    def SmSay(self, msg : str, tryAgain: bool = False):
+        msg = sanitize(msg)
+        return self.Request(b"\xff\xff\xff\xffrcon %b smsay %s" % (self._password, msg), tryAgain=tryAgain);
 
     def ExecFile(self, filename : str, quiet : bool = False):
         """
@@ -396,8 +404,7 @@ class RCON(object):
         The file must be in the /MBII/ directory prior to the server starting. After the file is indexed
         by the server however, the contents can be changed and changes will be reflected.
         """
-        if not type(filename) == bytes:
-            filename = bytes(filename, "UTF-8")
+        filename = sanitize(filename)
         if quiet:
             cmd = b'execq'
         else:
@@ -405,38 +412,30 @@ class RCON(object):
         return self.Request(b"\xff\xff\xff\xffrcon %b %b %b" % (self._password, cmd, filename))
 
     def MarkTK(self, player_id : int, time : int):
-        if not type(player_id) == bytes:
-            player_id = bytes(str(player_id), "UTF-8")
-        if not type(time) == bytes:
-            time = bytes(str(time), "UTF-8")
+        player_id = sanitize(player_id)
+        time = sanitize(time)
         return self.Request(b"\xff\xff\xff\xffrcon %b marktk %b %b" % (self._password, player_id, time))
 
     # !!! CUSTOM SERVER BUILD COMMANDS !!!
     # THESE WILL NOT WORK WITH STANDARD OPENJK SERVER BUILD
-    def SvPrint(self, msg : str, target : str = "all") -> str:
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
-        if not type(target) == bytes:
-            target = bytes(target, "UTF-8")
-        return self.Request(b"\xff\xff\xff\xffrcon %b svprint %b %b" % (self._password, target, msg))
+    def SvPrint(self, msg : str, target : str = "all", tryAgain: bool = False) -> str:
+        msg = sanitize(msg)
+        target = sanitize(target)
+        return self.Request(b"\xff\xff\xff\xffrcon %b svprint %b %b" % (self._password, target, msg), tryAgain=tryAgain)
 
-    def SvPrintCon(self, msg : str, target : str = "all") -> str:
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
-        if not type(target) == bytes:
-            target = bytes(target, "UTF-8")
-        return self.Request(b"\xff\xff\xff\xffrcon %b svprintcon %b %b" % (self._password, target, msg))
+    def SvPrintCon(self, msg : str, target : str = "all", tryAgain: bool = False) -> str:
+        msg = sanitize(msg)
+        target = sanitize(target)
+        return self.Request(b"\xff\xff\xff\xffrcon %b svprintcon %b %b" % (self._password, target, msg), tryAgain=tryAgain)
 
     def SvCenterPrint(self, msg : str, len : int = 1) -> str:
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
+        msg = sanitize(msg)
         if not type(len) == int:
             len = int(len)
         return self.Request(b"\xff\xff\xff\xffrcon %b svcp %b %i" % (self._password, msg, len))
 
     def ClientCenterPrint(self, pid : int, msg : str, len : int = 1) -> str:
-        if not type(msg) == bytes:
-            msg = bytes(msg, "UTF-8")
+        msg = sanitize(msg)
         if not type(pid) == int:
             pid = int(pid)
         if not type(len) == int:
@@ -445,6 +444,5 @@ class RCON(object):
       
     def UnmarkTK(self, player_id : int):
         # unmarktk <client> - Removes TK mark from specified client
-        if not type(player_id) == bytes:
-            player_id = bytes(str(player_id), "UTF-8")
+        player_id = sanitize(player_id)
         return self.Request(b"\xff\xff\xff\xffrcon %b unmarktk %b" % (self._password, player_id))

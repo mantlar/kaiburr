@@ -23,6 +23,7 @@ GODFINGER_EVENT_TYPE_OBJECTIVE          = 19 # An event that fires if any object
 GODFINGER_EVENT_TYPE_ONNAMECHANGE       = 20 # NameChangeEvent - fires immediately on name change via broadcast message
 GODFINGER_EVENT_TYPE_BANNED_ENTRY_ATTEMPT = 21 # BannedEntryAttemptEvent - fires when qconsole logs a banned ip connection attempt
 GODFINGER_EVENT_TYPE_SERVER_SAY         = 22 # ServerSayEvent - fires when the server broadcasts a message
+GODFINGER_EVENT_TYPE_ROUND_WINNER       = 23 # RoundWinnerEvent - fires when RoundWinner: RED/BLUE is logged
 
 GODFINGER_EVENT_TYPE_WD_UNAVAILABLE     = 1000 # watchdog raised event, game process is not active, happens only upon startup of GF
 GODFINGER_EVENT_TYPE_WD_EXISTING        = 1001 # watchdog raised event, game process is exiting upon GF startup
@@ -145,3 +146,9 @@ class ServerSayEvent(Event):
     def __init__(self, message : str, isStartup = False):
         self.message = message
         super().__init__(GODFINGER_EVENT_TYPE_SERVER_SAY, {}, isStartup)
+
+class RoundWinnerEvent(Event):
+    """Event fired when the engine logs RoundWinner: RED or BLUE."""
+    def __init__(self, winner_team : str, isStartup = False):
+        self.winner_team = winner_team
+        super().__init__(GODFINGER_EVENT_TYPE_ROUND_WINNER, {"winner_team": winner_team}, isStartup)
