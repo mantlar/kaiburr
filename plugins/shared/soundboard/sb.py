@@ -1,5 +1,5 @@
 import logging;
-import godfingerEvent;
+import kaiburrEvent;
 import pluginExports;
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
@@ -205,49 +205,49 @@ def OnFinish():
 # Called from system on some event raising, return True to indicate event being captured in this module, False to continue tossing it to other plugins in chain
 def OnEvent(event) -> bool:
     #print("Calling OnEvent function from plugin with event %s!" % (str(event)));
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         SV_MessageGlobal(PluginInstance.message_global_sound_path);
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         CL_OnConnect(event.client);
         SV_PlayerJoin(PluginInstance.player_join_sound_path);
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
         CL_PlayerStart(PluginInstance.player_start_sound_path, event.client);
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         CL_OnDisconnect(event.client);
         SV_PlayerLeave(PluginInstance.player_leave_sound_path);
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SERVER_EMPTY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SERVER_EMPTY:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         SV_EmptyAllClients();
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_EXIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_EXIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_POST_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_REAL_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_REAL_INIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER_SPAWN:
         return False;
 
     return False;
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()

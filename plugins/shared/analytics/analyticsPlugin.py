@@ -1,6 +1,6 @@
 import logging
 import json
-import godfingerEvent
+import kaiburrEvent
 import pluginExports
 import lib.shared.serverdata as serverdata
 import lib.shared.teams as teams
@@ -25,9 +25,9 @@ def OnInitialize(serverData: serverdata.ServerData, exports=None) -> bool:
 
 def OnStart() -> bool:
     global DB
-    DB = SERVER_DATA.API.GetDatabase("Godfinger")
+    DB = SERVER_DATA.API.GetDatabase("Kaiburr")
     if DB is None:
-        Log.error("Analytics: Could not get 'Godfinger' database.")
+        Log.error("Analytics: Could not get 'Kaiburr' database.")
         return False
     
     # Initialize the wide table
@@ -127,94 +127,94 @@ def LogEvent(event_type, player=None, **kwargs):
 def OnEvent(event) -> bool:
     # Removed event.isStartup check to allow recording historical log data
 
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         LogEvent("CHAT", event.client, 
                  message=event.message, 
                  team_id=event.teamId, 
                  team_name=TEAM_NAMES.get(event.teamId, str(event.teamId)))
     
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         LogEvent("CONNECT", event.client)
     
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         LogEvent("DISCONNECT", event.client, reason=event.reason)
     
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         LogEvent("CLIENT_CHANGED", event.client, 
                  changes=event.data,
                  current_name=getattr(event.client, "_name", None),
                  current_team=getattr(event.client, "_teamId", None),
                  current_guid=getattr(event.client, "_jaguid", None))
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         LogEvent("KILL", event.client, 
                  victim_id=event.victim._id if event.victim else None,
                  victim_name=event.victim._name if event.victim else None,
                  victim_guid=event.victim._jaguid if event.victim else None,
                  weapon=event.weaponStr)
     
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
         LogEvent("MAP_CHANGE", None, map_name=event.mapName, old_map_name=event.oldMapName)
     
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER_SPAWN:
         LogEvent("SPAWN", event.client, spawn_vars=event.data)
     
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_OBJECTIVE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_OBJECTIVE:
         LogEvent("OBJECTIVE", event.client, objective_data=event.data)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         LogEvent("SMOD_CHAT", None, 
                  admin_name=event.playerName, 
                  smod_id=event.smodID, 
                  admin_ip=event.adminIP, 
                  message=event.message)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_COMMAND:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_COMMAND:
         LogEvent("SMOD_COMMAND", None, smod_command_data=event.data)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_LOGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_LOGIN:
         LogEvent("SMOD_LOGIN", None, 
                  admin_name=event.playerName, 
                  smod_id=event.smodID, 
                  admin_ip=event.adminIP)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_EXIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_EXIT:
         LogEvent("ROUND_EXIT", None, exit_data=event.data)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         LogEvent("SERVER_INIT", None, init_vars=event.data)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         LogEvent("SERVER_SHUTDOWN", None)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER:
          LogEvent("PLAYER_GENERIC", event.client, text=event.data.get("text") if event.data else None)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_POST_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT:
         LogEvent("POST_INIT", None)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_REAL_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_REAL_INIT:
         LogEvent("REAL_INIT", None)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
         LogEvent("CLIENT_BEGIN", event.client)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SERVER_EMPTY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SERVER_EMPTY:
         LogEvent("SERVER_EMPTY", None)
 
     # Watchdog events
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_WD_UNAVAILABLE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_WD_UNAVAILABLE:
         LogEvent("WD_UNAVAILABLE", None)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_WD_EXISTING:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_WD_EXISTING:
         LogEvent("WD_EXISTING", None)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_WD_DIED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_WD_DIED:
         LogEvent("WD_DIED", None)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_WD_STARTED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_WD_STARTED:
         LogEvent("WD_STARTED", None)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_WD_RESTARTED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_WD_RESTARTED:
         LogEvent("WD_RESTARTED", None)
 
     return False
 
 if __name__ == "__main__":
-    print("Analytics plugin for Godfinger (Full Event Coverage).")
+    print("Analytics plugin for Kaiburr (Full Event Coverage).")

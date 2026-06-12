@@ -1,5 +1,5 @@
 ==============================================================================
-AUTOMOD PLUGIN FOR GODFINGER
+AUTOMOD PLUGIN FOR KAIBURR
 Authored by 2cwldys
 ==============================================================================
 
@@ -26,7 +26,7 @@ INSTALLATION
 
 1. Ensure the automod plugin directory is in: plugins/shared/automod/
 
-2. Add the plugin to your godfingerCfg.json in the "Plugins" section:
+2. Add the plugin to your kaiburrCfg.json in the "Plugins" section:
    {
        "enabled": true,
        "module": "plugins.shared.automod.automod"
@@ -34,7 +34,7 @@ INSTALLATION
 
 3. Configure the plugin by editing plugins/shared/automod/automodCfg.json
 
-4. Restart Godfinger
+4. Restart Kaiburr
 
 ==============================================================================
 CONFIGURATION (automodCfg.json)
@@ -171,11 +171,11 @@ SESSION TRACKING (in-memory, resets on map change):
 - Tracks violation count per IP address
 - Tracks which violation counts triggered punishments
 - Resets when map changes
-- Resets when Godfinger restarts
+- Resets when Kaiburr restarts
 
 PERSISTENT LOGGING (punishedPlayers.json):
 - Permanently logs all violations
-- Survives map changes and Godfinger restarts
+- Survives map changes and Kaiburr restarts
 - Tracks: IP, player name, message, matched words, timestamp, action taken
 - Used for historical records and admin review
 
@@ -250,7 +250,7 @@ When silentMode is enabled (set to true):
 - No public announcements when punishments are applied
 - No map change reset announcements
 - Plugin runs completely silently from player perspective
-- All logging still occurs normally in Godfinger logs
+- All logging still occurs normally in Kaiburr logs
 - Best for: Stealth enforcement where you don't want players to know they're being monitored
 
 When silentMode is disabled (set to false):
@@ -264,21 +264,21 @@ TROUBLESHOOTING
 ==============================================================================
 
 PLUGIN NOT LOADING:
-- Check godfingerCfg.json has correct plugin entry
-- Check Godfinger logs for error messages
+- Check kaiburrCfg.json has correct plugin entry
+- Check Kaiburr logs for error messages
 - Verify plugin files exist in plugins/shared/automod/
 
 VIOLATIONS NOT DETECTED:
 - Check "enabled": true in automodCfg.json
 - Check prohibitedWords list is not empty
 - Check player messages are being sent in chat (not private messages)
-- Check Godfinger logs for "violated chat rules" messages
+- Check Kaiburr logs for "violated chat rules" messages
 
 PUNISHMENTS NOT APPLYING:
 - Check threshold is being reached (count >= threshold)
 - Check action mode is valid (0-3)
 - Check server interface has permission to execute commands
-- Check Godfinger logs for "Error applying punishment" messages
+- Check Kaiburr logs for "Error applying punishment" messages
 
 FALSE POSITIVES:
 - Avoid very short words (2-3 letters) due to substring matching
@@ -288,7 +288,7 @@ FALSE POSITIVES:
 
 SMOD COMMANDS NOT APPEARING IN !help:
 - Check SERVER_DATA.SetServerVar("registeredSmodCommands") is called in OnInitialize
-- Restart Godfinger to register commands
+- Restart Kaiburr to register commands
 - Check no errors in logs during plugin initialization
 
 ==============================================================================
@@ -302,9 +302,9 @@ FILES:
 - readme.txt: This documentation
 
 EVENTS HANDLED:
-- GODFINGER_EVENT_TYPE_MESSAGE: Chat message monitoring
-- GODFINGER_EVENT_TYPE_MAPCHANGE: Session reset on map change
-- GODFINGER_EVENT_TYPE_SMSAY: SMOD admin commands
+- KAIBURR_EVENT_TYPE_MESSAGE: Chat message monitoring
+- KAIBURR_EVENT_TYPE_MAPCHANGE: Session reset on map change
+- KAIBURR_EVENT_TYPE_SMSAY: SMOD admin commands
 
 DATA STORAGE:
 - Session violations: In-memory dictionary, cleared on map change
@@ -337,7 +337,7 @@ SUPPORT
 
 For issues, feature requests, or questions:
 1. Check the troubleshooting section above
-2. Review Godfinger logs for error messages
+2. Review Kaiburr logs for error messages
 3. Verify configuration file syntax (valid JSON)
 4. Test with minimal prohibited words list first
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###############################################
-# ALLOWS QUICK GODFINGER START WITHOUT INPUTS #
+# ALLOWS QUICK KAIBURR START WITHOUT INPUTS #
 ###############################################
 
 # Save the current directory
@@ -19,5 +19,5 @@ cd "${original_dir}/start/linux_macOS"
 # Run startDebugSilent.sh with predefined input (N)
 echo "N" | ./startDebugSilent.sh
 
-# Return to the original directory (godfinger root)
+# Return to the original directory (kaiburr root)
 cd "$original_dir"

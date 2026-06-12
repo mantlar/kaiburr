@@ -1,5 +1,5 @@
 #   InterGalactic Banking Clan 2.0
-#   A banking plugin for the Godfinger Movie Battles II plugin system
+#   A banking plugin for the Kaiburr Movie Battles II plugin system
 #   By Mantlar/ACHUTA https://www.github.com/mantlar
 #   Plugin Dependencies (must be loaded before this in load order!): AccountSystem
 #
@@ -11,14 +11,14 @@ import time
 from typing import Dict, Optional
 from zipfile import ZipFile
 from random import sample
-from godfingerEvent import Event
+from kaiburrEvent import Event
 from lib.shared.serverdata import ServerData
 from database import DatabaseManager, ADatabase
 from lib.shared.player import Player
 import lib.shared.teams as teams
 import lib.shared.colors as colors
 import lib.shared.config as config
-import godfingerEvent
+import kaiburrEvent
 import json # Required for json.loads()
 
 # Initialize logger
@@ -1084,7 +1084,7 @@ class BankingPlugin:
                                                              args)
         return False
 
-    def _on_client_connect(self, event: godfingerEvent.ClientConnectEvent):
+    def _on_client_connect(self, event: kaiburrEvent.ClientConnectEvent):
         """Load player's credits on connect using user_id"""
         pid = event.client.GetId()
         self.get_credits(pid)  # Load into cache
@@ -1093,7 +1093,7 @@ class BankingPlugin:
         return False
 
     def _on_client_disconnect(self,
-                              event: godfingerEvent.ClientDisconnectEvent):
+                              event: kaiburrEvent.ClientDisconnectEvent):
         """Save player's credits on disconnect using user_id"""
         pid = event.client.GetId()
         if pid in self.account_manager.accounts.keys():
@@ -1579,7 +1579,7 @@ def OnStart() -> bool:
     if banking_plugin:
         init_accountsystem_xprts(banking_plugin)
         for client in banking_plugin.server_data.API.GetAllClients():
-            fakeEvent = godfingerEvent.ClientConnectEvent(client, {})
+            fakeEvent = kaiburrEvent.ClientConnectEvent(client, {})
             banking_plugin._on_client_connect(fakeEvent)
         return True
     else:
@@ -1624,24 +1624,24 @@ def OnEvent(event: Event) -> bool:
     if not banking_plugin:
         return False
 
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return banking_plugin._on_chat_message(event.client, event.message,
                                                event.teamId)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         banking_plugin._on_client_connect(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         banking_plugin._on_client_disconnect(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         banking_plugin._on_smsay(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         banking_plugin._on_kill(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         banking_plugin._on_init_game(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         banking_plugin._on_client_changed(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_OBJECTIVE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_OBJECTIVE:
         banking_plugin._on_objective(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
         banking_plugin._on_map_change(event)
     return False
 
@@ -1660,6 +1660,6 @@ def OnInitialize(server_data: ServerData, exports=None):
     return True
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()

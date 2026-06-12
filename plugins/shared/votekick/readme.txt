@@ -1,5 +1,5 @@
 ==============================================================================
-VOTEKICK PLUGIN FOR GODFINGER
+VOTEKICK PLUGIN FOR KAIBURR
 Authored by 2cwldys
 ==============================================================================
 
@@ -30,7 +30,7 @@ INSTALLATION
 
 1. Ensure the votekick plugin directory is in: plugins/shared/votekick/
 
-2. Add the plugin to your godfingerCfg.json in the "Plugins" array:
+2. Add the plugin to your kaiburrCfg.json in the "Plugins" array:
    {
        "path": "plugins.shared.votekick.votekick"
    }
@@ -38,7 +38,7 @@ INSTALLATION
 3. Configure the plugin by editing plugins/shared/votekick/votekickCfg.json
    (auto-created with defaults on first run)
 
-4. Restart Godfinger
+4. Restart Kaiburr
 
 ==============================================================================
 CONFIGURATION (votekickCfg.json)
@@ -272,12 +272,12 @@ VOTES NOT COUNTING:
 - Check if vote has already ended
 
 TEMPBAN NOT APPLYING:
-- Check Godfinger logs for errors
+- Check Kaiburr logs for errors
 - Verify server has tempban command available
 
 CONFLICT WITH RTV:
 - Both plugins check votesInProgress variable
-- If conflict occurs, restart Godfinger to clear state
+- If conflict occurs, restart Kaiburr to clear state
 
 ==============================================================================
 TECHNICAL DETAILS
@@ -290,11 +290,11 @@ FILES:
 - readme.txt: This documentation
 
 EVENTS HANDLED:
-- GODFINGER_EVENT_TYPE_MESSAGE: Chat commands (!votekick, !1, !2)
-- GODFINGER_EVENT_TYPE_SMSAY: SMOD commands (!overridevotekick, !togglevotekick)
-- GODFINGER_EVENT_TYPE_CLIENTDISCONNECT: Cancel vote if target leaves
-- GODFINGER_EVENT_TYPE_SMOD_LOGIN: Track SMOD logins for protection
-- GODFINGER_EVENT_TYPE_SMOD_COMMAND: Detect SMOD logout to remove protection
+- KAIBURR_EVENT_TYPE_MESSAGE: Chat commands (!votekick, !1, !2)
+- KAIBURR_EVENT_TYPE_SMSAY: SMOD commands (!overridevotekick, !togglevotekick)
+- KAIBURR_EVENT_TYPE_CLIENTDISCONNECT: Cancel vote if target leaves
+- KAIBURR_EVENT_TYPE_SMOD_LOGIN: Track SMOD logins for protection
+- KAIBURR_EVENT_TYPE_SMOD_COMMAND: Detect SMOD logout to remove protection
 
 SERVER VARIABLES:
 - votesInProgress: Array tracking active votes (shared with RTV, VoteMute)

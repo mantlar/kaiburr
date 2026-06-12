@@ -10,7 +10,7 @@ import sys
 import json
 
 # Repository details
-REPO_URL = "https://github.com/MBII-Galactic-Conquest/godfinger"
+REPO_URL = "https://github.com/mantlar/kaiburr"
 REPO_PATH = os.path.abspath(os.path.join(".."))
 CFG_FILE_PATH = "commit.cfg"
 UPDATE_CFG_FILE = "updateCfg.json"
@@ -166,7 +166,7 @@ def extract_7z():
         print("[HINT] If you cloned this repo using Git LFS, make sure Git LFS is installed and run:")
         print("       git lfs pull")
         print("       OR download a fresh copy of '7z_portable.zip' from the Releases page.")
-        print("       https://github.com/MBII-Galactic-Conquest/godfinger/releases")
+        print("       https://github.com/mantlar/kaiburr/releases")
         print(" ")
         remove_temp_files();
         input("Press Enter to exit...")
@@ -174,7 +174,7 @@ def extract_7z():
 
 def start():
     # Prompt user for update
-    user_choice = input("Do you wish to check for Godfinger updates? (Y/N): ").strip().lower()
+    user_choice = input("Do you wish to check for Kaiburr updates? (Y/N): ").strip().lower()
     if user_choice != 'y':
         exit(0)  # Exit if the user does not want to update
 
@@ -210,7 +210,7 @@ def fetch_deploy():
     deployment = os.path.abspath("./deployments.py")
     try:
         subprocess.run([PYTHON_CMD, deployment], check=True)
-        print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in godfinger and all plugins...\n\n")
+        print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in kaiburr and all plugins...\n\n")
         sys.exit()
     except subprocess.CalledProcessError as e:
         print(f"Error fetching deployments.py: {e}")
@@ -305,6 +305,6 @@ if __name__ == "__main__":
         remove_temp_files()
         fetch_deploy()
 
-    print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in godfinger and all plugins...\n\n")
+    print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in kaiburr and all plugins...\n\n")
     input("Press Enter to exit...");
     exit(0);

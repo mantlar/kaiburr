@@ -1,4 +1,4 @@
-=== Anti-Padawan Plugin for Godfinger ===
+=== Anti-Padawan Plugin for Kaiburr ===
 === Authored by 2cwldys ===
 
 DESCRIPTION:
@@ -22,7 +22,7 @@ FEATURES:
 
 INSTALLATION:
 1. Ensure the antipadawan plugin directory is in: plugins/shared/antipadawan/
-2. Add the following to your godfinger.py configuration in the "Plugins" section:
+2. Add the following to your kaiburr.py configuration in the "Plugins" section:
    {
        "path": "plugins.shared.antipadawan.antipadawan"
    }
@@ -136,7 +136,7 @@ When silentMode is enabled (set to true):
 - No private messages are sent to detected players
 - No "Thank you" messages are sent when penalties are removed
 - Plugin runs completely silently, only executing RCON commands
-- All logging still occurs normally in the Godfinger logs
+- All logging still occurs normally in the Kaiburr logs
 - Best for: Stealth enforcement where you don't want players to know they're being tracked
 
 REAL-TIME NAME CHANGE DETECTION:
@@ -242,11 +242,11 @@ ADMIN PENALTY PERSISTENCE:
 - Admin penalties persist until:
   * They expire naturally after their duration
   * An admin manually removes them with !gfunmarktk or !gfunmute
-  * The server/godfinger restarts (admin tracking is in-memory only)
+  * The server/kaiburr restarts (admin tracking is in-memory only)
 
 ADMIN MARK TRACKING:
 The plugin tracks admin-applied marks/mutes to prevent accidentally clearing them and to persist them across reconnects:
-- Admin marks/mutes are tracked in-memory only (cleared on godfinger restart)
+- Admin marks/mutes are tracked in-memory only (cleared on kaiburr restart)
 - Admins should use the special !gf commands to apply marks/mutes that the plugin tracks:
   * /smod smsay !gfmarktk <playername> <duration> - Mark player for TK and track it
   * /smod smsay !gfmute <playername> <duration> - Mute player and track it
@@ -268,7 +268,7 @@ TECHNICAL DETAILS:
 - Each entry contains: { "expires": timestamp, "duration": minutes, "admin_name": str, "admin_ip": str }
 - On player reconnect, plugin checks for active admin penalties and re-applies them
 - This ensures legitimate admin marks are never cleared by the plugin's auto-unmark feature
-- Admin tracking is cleared on godfinger/server restart (in-memory only, not persisted)
+- Admin tracking is cleared on kaiburr/server restart (in-memory only, not persisted)
 
 ADMIN COMMANDS:
 All admin commands are executed via /smod smsay:
@@ -407,7 +407,7 @@ Scenario E: Mass kick blocked names
    4. Public announcement shows count and strict/loose mode
 
 LOGGING:
-The plugin logs to the Godfinger log file with these levels:
+The plugin logs to the Kaiburr log file with these levels:
 - DEBUG: Name detection matches, private messages sent
 - INFO: Players detected on startup/connect, actions taken (kick/ban/marktk/mute)
 - ERROR: Configuration errors, name checking errors, message sending errors
@@ -421,7 +421,7 @@ Players being detected incorrectly?
   * Verify color codes are being stripped (^0-^9 format)
 
 Plugin not loading?
-  * Check godfinger.py plugin configuration
+  * Check kaiburr.py plugin configuration
   * Verify path: "plugins.shared.antipadawan.antipadawan"
   * Check log files for initialization errors
   * Ensure no syntax errors in antipadawanCfg.json
@@ -460,7 +460,7 @@ NOTES:
 - Tracking is IP-based, so changing IP will bypass tracking (but they'd still get re-penalized if using blocked name)
 
 COMPATIBILITY:
-- Requires Godfinger Movie Battles II plugin system
+- Requires Kaiburr Movie Battles II plugin system
 - Tested with MB2 server
 - No conflicts with other plugins (returns False from event handlers)
 - Compatible with whitelist, vpnmonitor, and other access control plugins

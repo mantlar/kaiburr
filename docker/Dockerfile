@@ -1,9 +1,9 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    GODFINGER_HOME=/app/jediacademy/gamedata/godfinger
+    KAIBURR_HOME=/app/jediacademy/gamedata/kaiburr
 
-WORKDIR ${GODFINGER_HOME}
+WORKDIR ${KAIBURR_HOME}
 
 RUN apt-get update && apt-get install -y \
     git \
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . ${GODFINGER_HOME}
+COPY . ${KAIBURR_HOME}
 
 RUN chmod +x quickstart_linux_macOS.sh prepare/linux_macOS/prepare.sh
 

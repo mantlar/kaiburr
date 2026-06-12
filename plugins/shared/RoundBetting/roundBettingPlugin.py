@@ -7,7 +7,7 @@ import re
 from lib.shared.timeout import Timeout
 from lib.shared.player import Player
 import lib.shared.teams as teams
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.colors as colors
 
 Log = logging.getLogger(__name__)
@@ -355,14 +355,14 @@ def OnEvent(event):
     # Handle InitGame (start of map / restart / next round starts)
     # Enter RESOLVING state and wait for the engine's RoundWinner: line.
     # No timeout needed — the engine guarantees exactly one RoundWinner: per round end.
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         # Log.info(f"[RoundBetting] >>> InitGame received. State: {inst.betting_state} -> RESOLVING")
         if inst.betting_state == "OPEN":
             inst.betting_window_timer.Finish()
         inst.betting_state = "RESOLVING"
         
     # Handle Round Winner (RED, BLUE, or DRAW)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_ROUND_WINNER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_ROUND_WINNER:
         winner = getattr(event, 'winner_team', 'UNKNOWN')
         winner_clean = re.sub(r'\^[0-9a-zA-Z]', '', winner).strip().upper()
         # Log.info(f"[RoundBetting] >>> RoundWinner received: '{winner_clean}'. State: {inst.betting_state}")
@@ -386,7 +386,7 @@ def OnEvent(event):
             Log.warning(f"[RoundBetting] Unknown RoundWinner value: '{winner_clean}'. Ignoring.")
             
     # Handle SMOD Commands
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         if event.message.startswith("!"):
             msg = event.message[1:]
             args = msg.split()
@@ -397,7 +397,7 @@ def OnEvent(event):
                         return inst._smodCommandList[c][1](event.playerName, event.smodID, event.adminIP, args)
             
     # Handle Chat Messages for betting
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         if event.client:
             message = event.message
             if message.startswith("!"):

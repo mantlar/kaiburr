@@ -35,7 +35,7 @@ cd ../../
 
 chmod +x ./cleanup.sh
 chmod +x ./update/update.py
-chmod +x ./godfinger.py
+chmod +x ./kaiburr.py
 
 if test -f venv/bin/activate; then
     source venv/bin/activate
@@ -47,7 +47,7 @@ if test -f venv/bin/activate; then
     $PYTHON_CMD ./update.py
     cd ../
     ./cleanup.sh
-    $PYTHON_CMD ./godfinger.py --debug
+    $PYTHON_CMD ./kaiburr.py --debug
     read -p "Press Enter to continue..."
 else
     echo "Virtual environment does not exist or was created improperly, please run prepare.sh in the prepare directory. Aborting."

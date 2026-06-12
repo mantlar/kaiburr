@@ -1,7 +1,7 @@
 @echo off
 
 :::::::::::::::::::::::::::::::::::::::::::::::::
-:: ALLOWS QUICK GODFINGER START WITHOUT INPUTS ::
+:: ALLOWS QUICK KAIBURR START WITHOUT INPUTS ::
 :::::::::::::::::::::::::::::::::::::::::::::::::
 
 cd %CD%
@@ -22,5 +22,5 @@ pushd "%CD%\start\win\"
     echo N
 ) | cmd /c startDebugSilent.bat
 
-:: Return to the original directory (godfinger root)
+:: Return to the original directory (kaiburr root)
 popd

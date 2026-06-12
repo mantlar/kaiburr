@@ -1,4 +1,4 @@
-=== Whitelist Plugin for Godfinger ===
+=== Whitelist Plugin for Kaiburr ===
 === Authored by 2cwldys ===
 
 DESCRIPTION:
@@ -17,7 +17,7 @@ FEATURES:
 
 INSTALLATION:
 1. Ensure the whitelist plugin directory is in: plugins/shared/whitelist/
-2. Add the following to your godfinger.py configuration in the "Plugins" section:
+2. Add the following to your kaiburr.py configuration in the "Plugins" section:
    {
        "path": "plugins.shared.whitelist.whitelist"
    }
@@ -118,7 +118,7 @@ EXAMPLES:
    }
 
 LOGGING:
-The plugin logs to the Godfinger log file with these levels:
+The plugin logs to the Kaiburr log file with these levels:
 - DEBUG: Whitelist matches, detailed processing
 - INFO: Player blocks
 - ERROR: Configuration errors, IP parsing errors
@@ -131,7 +131,7 @@ TROUBLESHOOTING:
   * Enable debug logging to see match results
 
 - Plugin not loading?
-  * Check godfinger.py plugin configuration
+  * Check kaiburr.py plugin configuration
   * Verify path: "plugins.shared.whitelist.whitelist"
   * Check log files for errors
 

@@ -42,7 +42,7 @@ elif IsWindows:
     signal.signal(signal.SIGTERM, Sighandler)
     signal.signal(signal.SIGABRT, Sighandler)
 
-Argparser = argparse.ArgumentParser(prog="Godfinger", description="The universal python platform for MBII server monitoring", epilog="It's a mess.")
+Argparser = argparse.ArgumentParser(prog="Kaiburr", description="The universal python platform for MBII server monitoring", epilog="It's a mess.")
 Argparser.add_argument("-d", "--debug", action="store_true")
 Argparser.add_argument("-lf", "--logfile")
 Argparser.add_argument("-mbiicmd")
@@ -55,8 +55,8 @@ import lib.shared.config as config
 import lib.shared.rcon as rcon
 import lib.shared.serverdata as serverdata
 import lib.shared.threadcontrol as threadcontrol
-import godfingerEvent
-import godfingerAPI
+import kaiburrEvent
+import kaiburrAPI
 import lib.shared.client as client
 import lib.shared.clientmanager as clientmanager
 import lib.shared.pk3 as pk3
@@ -68,7 +68,7 @@ import logMessage
 import math
 import lib.shared.colors as colors
 import cvar
-import godfingerinterface
+import kaiburrinterface
 import lib.shared.timeout as timeout
 import lib.shared.pswd as pswd
 import lib.shared.observer as observer
@@ -76,11 +76,12 @@ import lib.shared.observer as observer
 INVALID_ID = -1
 USERINFO_LEN = len("userinfo: ")
 
-CONFIG_DEFAULT_PATH = os.path.join(os.getcwd(),"godfingerCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.getcwd(),"kaiburrCfg.json")
+CONFIG_LEGACY_PATH = os.path.join(os.getcwd(),"kaiburrCfg.json")
 # Things like port and ip can be omitted in future, since this thing is supposed to be sharing the filesystem with the server, it could read it's config for credentials.
 CONFIG_FALLBACK = \
 """{
-    "Name":"MBII Godfinger : Consequetive Failure",
+    "Name":"MBII Kaiburr : Consequential Success",
     "MBIIPath": "your/path/here/",
     "logFilename":"server.log",
     "serverPath":"your/path/here/",
@@ -134,9 +135,9 @@ CONFIG_FALLBACK = \
         "./"
     ],
 
-    "prologueMessage":"Initialized Godfinger System",
+    "prologueMessage":"Initialized Kaiburr System",
 
-    "epilogueMessage":"Finishing Godfinger System",
+    "epilogueMessage":"Finishing Kaiburr System",
 
     "Plugins":
     [
@@ -231,16 +232,27 @@ class MBIIServer:
 
         startTime = time.time()
         self._status = MBIIServer.STATUS_INIT
-        Log.info("Initializing Godfinger...")
+        Log.info("Initializing Kaiburr...")
         # Config load first
-        self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+        import shutil
+        if os.path.exists(CONFIG_DEFAULT_PATH):
+            self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+        elif os.path.exists(CONFIG_LEGACY_PATH):
+            Log.info("Legacy config kaiburrCfg.json found. Migrating to kaiburrCfg.json...")
+            try:
+                shutil.copy2(CONFIG_LEGACY_PATH, CONFIG_DEFAULT_PATH)
+            except Exception as e:
+                Log.warning("Failed to copy legacy config: %s", str(e))
+            self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+        else:
+            self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
         if self._config == None:
-            Log.error("Failed to load Godfinger config.")
+            Log.error("Failed to load Kaiburr config.")
             self._status = MBIIServer.STATUS_CONFIG_ERROR
             return
 
         if not self.ValidateConfig(self._config):
-            Log.error("Godfinger config validation failed.")
+            Log.error("Kaiburr config validation failed.")
             self._status = MBIIServer.STATUS_CONFIG_ERROR
             return
 
@@ -248,10 +260,10 @@ class MBIIServer:
         if "watchdog" in self._config.cfg:
             if not self._config.cfg["watchdog"].get("serverStartCommand", ""):
                 if IsWindows:
-                    # Use autostart script which only starts MB2 server, not Godfinger
+                    # Use autostart script which only starts MB2 server, not Kaiburr
                     self._config.cfg["watchdog"]["serverStartCommand"] = os.path.join(os.getcwd(), "start", "win", "bin", "autostart_win.py")
                 else:
-                    # Use autostart script which only starts MB2 server, not Godfinger
+                    # Use autostart script which only starts MB2 server, not Kaiburr
                     self._config.cfg["watchdog"]["serverStartCommand"] = os.path.join(os.getcwd(), "start", "linux_macOS", "bin", "autostart_linux_macOS.py")
                 Log.debug(f"Set default watchdog command: {self._config.cfg['watchdog']['serverStartCommand']}")
 
@@ -265,7 +277,7 @@ class MBIIServer:
 
         if cfgIface == "pty":
             # NOTE: PtyInterface is only supported as a single interface connection
-            self._svInterfaces.append(godfingerinterface.PtyInterface(cwd=self._config.cfg["serverPath"],\
+            self._svInterfaces.append(kaiburrinterface.PtyInterface(cwd=self._config.cfg["serverPath"],\
                                                                 args=[os.path.join(self._config.cfg["serverPath"], self._config.cfg["interfaces"]["pty"]["target"])]\
                                                                 + (Args.mbiicmd.split() if Args.mbiicmd else []),\
                                                                 inputDelay=self._config.cfg["interfaces"]["pty"]["inputDelay"],\
@@ -297,7 +309,7 @@ class MBIIServer:
 
                 qconsolePath = os.path.join(self._config.cfg["MBIIPath"], remote_qconsoleFilename) if remote_qconsoleFilename else None
 
-                interface = godfingerinterface.RconInterface(
+                interface = kaiburrinterface.RconInterface(
                                                                     remote_ip,\
                                                                     remote_port,\
                                                                     shared_bindAddress,\
@@ -325,8 +337,15 @@ class MBIIServer:
 
         # Databases
         self._dbManager = database.DatabaseManager()
-        r = self._dbManager.CreateDatabase("Godfinger.db", "Godfinger")
-        self._database = self._dbManager.GetDatabase("Godfinger")
+        # Auto migrate legacy database if present
+        if not os.path.exists("Kaiburr.db") and os.path.exists("Kaiburr.db"):
+            try:
+                os.rename("Kaiburr.db", "Kaiburr.db")
+                Log.info("Successfully migrated Kaiburr.db to Kaiburr.db")
+            except Exception as e:
+                Log.warning("Failed to migrate Kaiburr.db to Kaiburr.db: %s", str(e))
+        r = self._dbManager.CreateDatabase("Kaiburr.db", "Kaiburr")
+        self._database = self._dbManager.GetDatabase("Kaiburr")
         self._database.Open()
 
         # Archives
@@ -349,7 +368,7 @@ class MBIIServer:
 
         # Server data handling
         start_sd = time.time()
-        exportAPI = godfingerAPI.API()
+        exportAPI = kaiburrAPI.API()
         exportAPI.GetClientCount    = self.API_GetClientCount
         exportAPI.GetClientById     = self.API_GetClientById
         exportAPI.GetClientByName   = self.API_GetClientByName
@@ -401,7 +420,7 @@ class MBIIServer:
         if self._config.cfg.get("watchdog", {}).get("enabled", False):
             Log.info(f"Watchdog restart enabled for MB2 server process '{self._config.cfg['serverFileName']}'")
 
-        Log.info("The Godfinger initialized in %.2f seconds!\n" %(time.time() - startTime))
+        Log.info("Kaiburr initialized in %.2f seconds!\n" %(time.time() - startTime))
 
     def _HandleWatchdogEvent(self, event_type):
         """Handle watchdog events from the RconInterface watchdog"""
@@ -477,7 +496,7 @@ class MBIIServer:
     def Finish(self,):
         # Ensure that finish is called only once; if _isFinished is already set, skip cleanup.
         if not hasattr(self, "_isFinished") or not self._isFinished:
-            Log.info("Finishing Godfinger...")
+            Log.info("Finishing Kaiburr...")
             self._status = MBIIServer.STATUS_FINISHING
             self.Stop()
             # Only attempt to finish _pluginManager if it was successfully initialized.
@@ -485,7 +504,7 @@ class MBIIServer:
                 self._pluginManager.Finish()
             self._status = MBIIServer.STATUS_FINISHED
             self._isFinished = True
-            Log.info("Finished Godfinger.")
+            Log.info("Finished Kaiburr.")
 
     def __del__(self):
         self.Finish()
@@ -514,7 +533,7 @@ class MBIIServer:
                 hostName = splitted[1].split(":", 1)[1].strip()
                 self._serverData.name = colors.StripColorCodes(hostName)
             else:
-                self._serverData.name = "Unknown Godfinger Server"
+                self._serverData.name = "Unknown Kaiburr Server"
                 
             versionSplit = splitted[2].split()
             version = versionSplit[2] + "_" + versionSplit[3]
@@ -575,7 +594,7 @@ class MBIIServer:
             self._restartTimeout.Set(timeout)
             self._lastRestartTick = 0.0
             # Use primary interface to send command
-            self._primarySvInterface.SvSay("^1 {text}.".format(text = "Godfinger Restarting procedure started, ETA %s"%self._restartTimeout.LeftDHMS()))
+            self._primarySvInterface.SvSay("^1 {text}.".format(text = "Kaiburr Restarting procedure started, ETA %s"%self._restartTimeout.LeftDHMS()))
             Log.info("Restart issued, proceeding.")
 
     def Start(self):
@@ -626,7 +645,7 @@ class MBIIServer:
 
     def Stop(self):
         if self._isRunning:
-            Log.info("Stopping Godfinger...")
+            Log.info("Stopping Kaiburr...")
             # Use primary interface for SvSay
             if self._primarySvInterface:
                 self._primarySvInterface.SvSay("^1 {text}.".format(text = self._config.cfg["epilogueMessage"]))
@@ -644,7 +663,7 @@ class MBIIServer:
                 tick = self._restartTimeout.Left()
                 if tick - self._lastRestartTick <= -5:
                     # Use primary interface for SvSay
-                    self._primarySvInterface.SvSay("^1 {text}.".format(text = "Godfinger is about to restart in %s"%self._restartTimeout.LeftDHMS()))
+                    self._primarySvInterface.SvSay("^1 {text}.".format(text = "Kaiburr is about to restart in %s"%self._restartTimeout.LeftDHMS()))
                     self._lastRestartTick = tick
             else:
                 Sighandler(signal.SIGINT, -1)
@@ -676,19 +695,19 @@ class MBIIServer:
         # maybe its better to move it outside of string parsing
         if line.startswith("wd_"):
             if line == "wd_unavailable":
-                self._pluginManager.Event(godfingerEvent.Event(godfingerEvent.GODFINGER_EVENT_TYPE_WD_UNAVAILABLE,None))
+                self._pluginManager.Event(kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_WD_UNAVAILABLE,None))
                 self._HandleWatchdogEvent("unavailable")
             elif line == "wd_existing":
-                self._pluginManager.Event(godfingerEvent.Event(godfingerEvent.GODFINGER_EVENT_TYPE_WD_EXISTING,None))
+                self._pluginManager.Event(kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_WD_EXISTING,None))
                 self._HandleWatchdogEvent("existing")
             elif line == "wd_started":
-                self._pluginManager.Event(godfingerEvent.Event(godfingerEvent.GODFINGER_EVENT_TYPE_WD_STARTED,None))
+                self._pluginManager.Event(kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_WD_STARTED,None))
                 self._HandleWatchdogEvent("started")
             elif line == "wd_died":
-                self._pluginManager.Event(godfingerEvent.Event(godfingerEvent.GODFINGER_EVENT_TYPE_WD_DIED,None))
+                self._pluginManager.Event(kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_WD_DIED,None))
                 self._HandleWatchdogEvent("died")
             elif line == "wd_restarted":
-                self._pluginManager.Event(godfingerEvent.Event(godfingerEvent.GODFINGER_EVENT_TYPE_WD_RESTARTED,None))
+                self._pluginManager.Event(kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_WD_RESTARTED,None))
                 self._HandleWatchdogEvent("restarted")
             return
 
@@ -709,7 +728,7 @@ class MBIIServer:
             return
         elif line.startswith("Game rejected a connection: Banned.."):
             if hasattr(self, "_last_connecting_ip") and self._last_connecting_ip:
-                self._pluginManager.Event(godfingerEvent.BannedEntryAttemptEvent(self._last_connecting_ip))
+                self._pluginManager.Event(kaiburrEvent.BannedEntryAttemptEvent(self._last_connecting_ip))
                 self._last_connecting_ip = None
             return
 
@@ -779,13 +798,13 @@ class MBIIServer:
 
         if len(parts) > 1:
             message : str = parts[1].strip()
-            self._pluginManager.Event( godfingerEvent.ServerSayEvent( message, isStartup = logMessage.isStartup ) )
+            self._pluginManager.Event( kaiburrEvent.ServerSayEvent( message, isStartup = logMessage.isStartup ) )
 
     def OnRoundWinner(self, logMessage : logMessage.LogMessage):
         lineParse = logMessage.content.split()
         if len(lineParse) > 1:
             winner_team = lineParse[1]
-            self._pluginManager.Event(godfingerEvent.RoundWinnerEvent(winner_team, isStartup=logMessage.isStartup))
+            self._pluginManager.Event(kaiburrEvent.RoundWinnerEvent(winner_team, isStartup=logMessage.isStartup))
 
     def OnChatMessage(self, logMessage : logMessage.LogMessage):
         messageRaw = logMessage.content
@@ -823,9 +842,9 @@ class MBIIServer:
                     # Handle help command directly
                     self.HandleChatHelp(senderClient, teams.TEAM_GLOBAL, cmdArgs)
                     # Forward the message event so logger plugins (like ghost_yoda) can still see it
-                    self._pluginManager.Event( godfingerEvent.MessageEvent( senderClient, message, { 'messageRaw' : messageRaw }, isStartup = logMessage.isStartup ) )
+                    self._pluginManager.Event( kaiburrEvent.MessageEvent( senderClient, message, { 'messageRaw' : messageRaw }, isStartup = logMessage.isStartup ) )
                     return  # Don't pass to plugins
-            self._pluginManager.Event( godfingerEvent.MessageEvent( senderClient, message, { 'messageRaw' : messageRaw }, isStartup = logMessage.isStartup ) )
+            self._pluginManager.Event( kaiburrEvent.MessageEvent( senderClient, message, { 'messageRaw' : messageRaw }, isStartup = logMessage.isStartup ) )
         else:
             pass
 
@@ -840,7 +859,7 @@ class MBIIServer:
         if len(parts) > 1:
             message : str = parts[1]
             Log.debug("Team chat meassge %s, from client %s" % (messageRaw, str(senderClient)))
-            self._pluginManager.Event( godfingerEvent.MessageEvent( senderClient, message, { 'messageRaw' : messageRaw }, senderClient.GetTeamId(), isStartup = logMessage.isStartup ) )
+            self._pluginManager.Event( kaiburrEvent.MessageEvent( senderClient, message, { 'messageRaw' : messageRaw }, senderClient.GetTeamId(), isStartup = logMessage.isStartup ) )
         else:
             pass
 
@@ -890,7 +909,7 @@ class MBIIServer:
                             cl._name = newName
 
                             # Fire ONNAMECHANGE event for immediate name change detection
-                            self._pluginManager.Event(godfingerEvent.NameChangeEvent(
+                            self._pluginManager.Event(kaiburrEvent.NameChangeEvent(
                                 cl, oldName, newName,
                                 isStartup=logMessage.isStartup
                             ))
@@ -900,15 +919,15 @@ class MBIIServer:
                             changedOld["ja_guid"] = cl._jaguid
                             cl._jaguid = vars["ja_guid"]
                 if len(changedOld) > 0 :
-                    self._pluginManager.Event( godfingerEvent.ClientChangedEvent(cl, changedOld, isStartup = logMessage.isStartup ) ) # a spawned client changed
+                    self._pluginManager.Event( kaiburrEvent.ClientChangedEvent(cl, changedOld, isStartup = logMessage.isStartup ) ) # a spawned client changed
                 else:
-                    self._pluginManager.Event( godfingerEvent.PlayerSpawnEvent ( cl, vars,  isStartup = logMessage.isStartup ) ) # a newly spawned client
+                    self._pluginManager.Event( kaiburrEvent.PlayerSpawnEvent ( cl, vars,  isStartup = logMessage.isStartup ) ) # a newly spawned client
             else:
                 Log.warning("Client \"Player\" event with client is None.")
 
         # Only call PlayerEvent if cl was successfully retrieved
         if cl != None:
-            self._pluginManager.Event( godfingerEvent.PlayerEvent(cl, {"text":textified}, isStartup = logMessage.isStartup))
+            self._pluginManager.Event( kaiburrEvent.PlayerEvent(cl, {"text":textified}, isStartup = logMessage.isStartup))
 
 
     def OnBroadcastNameChange(self, logMessage):
@@ -970,14 +989,14 @@ class MBIIServer:
 
             # Fire ONNAMECHANGE event (immediate detection)
             Log.info(f"[NAMECHANGE DEBUG] Firing NameChangeEvent")
-            self._pluginManager.Event(godfingerEvent.NameChangeEvent(
+            self._pluginManager.Event(kaiburrEvent.NameChangeEvent(
                 target_client, old_name_raw, new_name_raw,
                 isStartup=logMessage.isStartup
             ))
 
             # Also fire CLIENTCHANGED event for backward compatibility
             Log.info(f"[NAMECHANGE DEBUG] Firing ClientChangedEvent")
-            self._pluginManager.Event(godfingerEvent.ClientChangedEvent(
+            self._pluginManager.Event(kaiburrEvent.ClientChangedEvent(
                 target_client, {"name": old_name_raw},
                 isStartup=logMessage.isStartup
             ))
@@ -998,10 +1017,10 @@ class MBIIServer:
             commandName = cmdArgs[1].lower()
             for commandAlias, helpText in commandAliasList:
                 if commandName == commandAlias.lower():
-                    self._primarySvInterface.Say('^1[Godfinger]: ^7' + helpText)
+                    self._primarySvInterface.Say('^1[Kaiburr]: ^7' + helpText)
                     return True
             # Command not found
-            self._primarySvInterface.Say(f"^1[Godfinger]:^7 Couldn't find chat command: {commandName}")
+            self._primarySvInterface.Say(f"^1[Kaiburr]:^7 Couldn't find chat command: {commandName}")
         else:
             # List all available commands
             commandStr = "Available commands (Say !help <command> for details): " + ', '.join([aliases for aliases, _ in commandAliasList])
@@ -1018,9 +1037,9 @@ class MBIIServer:
                     messages.append(msg)
                 if len(commandStr) > 0:
                     messages.append(commandStr)
-                self._primarySvInterface.BatchExecute("b", [f"say {'^1[Godfinger]: ^7' + msg}; wait 5" for msg in messages])
+                self._primarySvInterface.BatchExecute("b", [f"say {'^1[Kaiburr]: ^7' + msg}; wait 5" for msg in messages])
             else:
-                self._primarySvInterface.Say('^1[Godfinger]: ^7' + commandStr)
+                self._primarySvInterface.Say('^1[Kaiburr]: ^7' + commandStr)
 
         return True
 
@@ -1032,7 +1051,7 @@ class MBIIServer:
             player_id = int(match.group(1))
             cl = self._clientManager.GetClientById(player_id)
             if cl:
-                self._pluginManager.Event(godfingerEvent.ObjectiveEvent(cl, {"messageRaw": messageRaw}, isStartup=logMessage.isStartup))
+                self._pluginManager.Event(kaiburrEvent.ObjectiveEvent(cl, {"messageRaw": messageRaw}, isStartup=logMessage.isStartup))
         else:
             Log.error("Unable to retrieve player ID from objective message")
             return False
@@ -1071,9 +1090,9 @@ class MBIIServer:
                     messages.append(msg)
                 if len(commandStr) > 0:
                     messages.append(commandStr)
-                self._primarySvInterface.BatchExecute("b", [f"smsay {'^1[Godfinger]: ^7' + msg}; wait 5" for msg in messages])
+                self._primarySvInterface.BatchExecute("b", [f"smsay {'^1[Kaiburr]: ^7' + msg}; wait 5" for msg in messages])
             else:
-                self._primarySvInterface.SmSay('^1[Godfinger]: ^7' + commandStr)
+                self._primarySvInterface.SmSay('^1[Kaiburr]: ^7' + commandStr)
         return True
 
     def OnKill(self, logMessage : logMessage.LogMessage):
@@ -1149,8 +1168,8 @@ class MBIIServer:
                     # Handle team change to spectator
                     old_team = cl.GetTeamId()
                     cl._teamId = teams.TEAM_SPEC
-                    self._pluginManager.Event(godfingerEvent.ClientChangedEvent(cl, {"team": old_team}, logMessage.isStartup))
-            self._pluginManager.Event(godfingerEvent.KillEvent(cl, clVictim, weapon_str, data, logMessage.isStartup))
+                    self._pluginManager.Event(kaiburrEvent.ClientChangedEvent(cl, {"team": old_team}, logMessage.isStartup))
+            self._pluginManager.Event(kaiburrEvent.KillEvent(cl, clVictim, weapon_str, data, logMessage.isStartup))
 
     def OnExit(self, logMessages : list[logMessage.LogMessage]):
         textified = self._exitLogMessages[0].content
@@ -1175,7 +1194,7 @@ class MBIIServer:
             scoreLine = "red:0 blue:0"
             teamScores = dict(map(lambda a: a.split(":"), scoreLine.split()))
         exitReason = ' '.join(textsplit[1:])
-        self._pluginManager.Event( godfingerEvent.ExitEvent( {"reason" : exitReason, "teamScores" : teamScores, "playerScores" : playerScores}, isStartup = self._exitLogMessages[0].isStartup ) )
+        self._pluginManager.Event( kaiburrEvent.ExitEvent( {"reason" : exitReason, "teamScores" : teamScores, "playerScores" : playerScores}, isStartup = self._exitLogMessages[0].isStartup ) )
 
 
     def OnClientConnect(self, logMessage : logMessage.LogMessage):
@@ -1212,7 +1231,7 @@ class MBIIServer:
         if not id in [cl.GetId() for cl in self.API_GetAllClients()]:
             newClient = client.Client(id, name, ip)
             self._clientManager.AddClient(newClient) # make sure its added BEFORE events are processed
-            self._pluginManager.Event( godfingerEvent.ClientConnectEvent( newClient, None, isStartup = logMessage.isStartup ) )
+            self._pluginManager.Event( kaiburrEvent.ClientConnectEvent( newClient, None, isStartup = logMessage.isStartup ) )
         else:
             pass
 
@@ -1223,7 +1242,7 @@ class MBIIServer:
         client = self._clientManager.GetClientById(clientId)
         if client != None:
             pass
-            self._pluginManager.Event( godfingerEvent.ClientBeginEvent( client, {}, isStartup = logMessage.isStartup ) )
+            self._pluginManager.Event( kaiburrEvent.ClientBeginEvent( client, {}, isStartup = logMessage.isStartup ) )
 
     def OnClientDisconnect(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
@@ -1233,11 +1252,11 @@ class MBIIServer:
         cl = self._clientManager.GetClientById(dcId)
         if cl != None:
             Log.debug("Player with dcId %s disconnected ", str(dcId))
-            self._pluginManager.Event( godfingerEvent.ClientDisconnectEvent( cl, None, isStartup = logMessage.isStartup ) )
+            self._pluginManager.Event( kaiburrEvent.ClientDisconnectEvent( cl, None, isStartup = logMessage.isStartup ) )
             self._clientManager.RemoveClient(cl) # make sure its removed AFTER events are processed by plugins
             if self._clientManager.GetClientCount() == 0:
                 Log.debug("All players have left the server")
-                self._pluginManager.Event( godfingerEvent.ServerEmptyEvent(isStartup = logMessage.isStartup))
+                self._pluginManager.Event( kaiburrEvent.ServerEmptyEvent(isStartup = logMessage.isStartup))
         else:
             pass
 
@@ -1275,13 +1294,13 @@ class MBIIServer:
             oldName = cl.GetName()
             newName = userInfoDict["n"]
             # Fire ONNAMECHANGE event for immediate name change detection
-            self._pluginManager.Event(godfingerEvent.NameChangeEvent(
+            self._pluginManager.Event(kaiburrEvent.NameChangeEvent(
                 cl, oldName, newName,
                 isStartup=logMessage.isStartup
             ))
 
         cl.Update(userInfoDict)
-        self._pluginManager.Event(godfingerEvent.ClientChangedEvent(cl, cl.GetInfo(), isStartup=logMessage.isStartup))
+        self._pluginManager.Event(kaiburrEvent.ClientChangedEvent(cl, cl.GetInfo(), isStartup=logMessage.isStartup))
 
     def OnInitGame(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
@@ -1303,8 +1322,8 @@ class MBIIServer:
 
         Log.info("Current map name on init : %s", self._serverData.mapName)
 
-        self._pluginManager.Event( godfingerEvent.Event( godfingerEvent.GODFINGER_EVENT_TYPE_INIT, { "vars" : vars }, isStartup = logMessage.isStartup ) )
-        self._pluginManager.Event( godfingerEvent.Event( godfingerEvent.GODFINGER_EVENT_TYPE_POST_INIT, {}, isStartup = logMessage.isStartup ) )
+        self._pluginManager.Event( kaiburrEvent.Event( kaiburrEvent.KAIBURR_EVENT_TYPE_INIT, { "vars" : vars }, isStartup = logMessage.isStartup ) )
+        self._pluginManager.Event( kaiburrEvent.Event( kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT, {}, isStartup = logMessage.isStartup ) )
 
     def OnShutdownGame(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
@@ -1313,15 +1332,15 @@ class MBIIServer:
         for client in allClients:
             Log.debug("Shutdown pseudo-disconnecting client %s" %str(client))
 
-        self._pluginManager.Event( godfingerEvent.Event( godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN, None, isStartup = logMessage.isStartup ) )
+        self._pluginManager.Event( kaiburrEvent.Event( kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN, None, isStartup = logMessage.isStartup ) )
 
     def OnRealInit(self, logMessage : logMessage.LogMessage):
         Log.debug("Server starting up for real.")
-        self._pluginManager.Event(godfingerEvent.Event( godfingerEvent.GODFINGER_EVENT_TYPE_REAL_INIT, None, isStartup = logMessage.isStartup ))
+        self._pluginManager.Event(kaiburrEvent.Event( kaiburrEvent.KAIBURR_EVENT_TYPE_REAL_INIT, None, isStartup = logMessage.isStartup ))
 
     def OnMapChange(self, mapName : str, oldMapName : str):
         Log.debug(f"Map change event received: {mapName}")
-        self._pluginManager.Event(godfingerEvent.MapChangeEvent(mapName, oldMapName))
+        self._pluginManager.Event(kaiburrEvent.MapChangeEvent(mapName, oldMapName))
 
     def OnSmsay(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
@@ -1342,7 +1361,7 @@ class MBIIServer:
                 if command.lower() == "help":
                     self.HandleSmodHelp(senderName, smodID, senderIP, cmdArgs)
                     return True  # Command handled, don't pass to plugins
-            self._pluginManager.Event(godfingerEvent.SmodSayEvent(senderName, int(smodID), senderIP, message, isStartup = logMessage.isStartup))
+            self._pluginManager.Event(kaiburrEvent.SmodSayEvent(senderName, int(smodID), senderIP, message, isStartup = logMessage.isStartup))
         else:
             pass
 
@@ -1425,7 +1444,7 @@ class MBIIServer:
                     break
             data['args'] = args_str
 
-        self._pluginManager.Event(godfingerEvent.SmodCommandEvent(data))
+        self._pluginManager.Event(kaiburrEvent.SmodCommandEvent(data))
 
     def OnSmodLogin(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
@@ -1461,7 +1480,7 @@ class MBIIServer:
                     ip_with_port = ip_match.group(1)
                     data['smod_ip'] = ip_with_port.split(':')[0]
 
-        self._pluginManager.Event(godfingerEvent.SmodLoginEvent(data['smod_name'], data['smod_id'], data['smod_ip'], isStartup = logMessage.isStartup))
+        self._pluginManager.Event(kaiburrEvent.SmodLoginEvent(data['smod_name'], data['smod_id'], data['smod_ip'], isStartup = logMessage.isStartup))
 
 
     # API export functions
@@ -1538,7 +1557,7 @@ def InitLogger():
 
 def main():
     InitLogger()
-    Log.info("Godfinger entry point.")
+    Log.info("Kaiburr entry point.")
     global Server
     Server = MBIIServer()
     int_status = Server.GetStatus()
@@ -1551,12 +1570,12 @@ def main():
             except Exception as e:
                 Log.error(f"ERROR occurred: Type: {type(e)}; Reason: {e}; Traceback: {traceback.format_exc()}")
                 try:
-                    with open('lib/other/gf.txt', 'r') as file:
+                    with open('lib/other/kb.txt', 'r') as file:
                         gf = file.read()
                         print("\n\n" + gf)
                         file.close()
                 except Exception as e:
-                    Log.error(f"ERROR occurred: No fucking god finger.txt")
+                    Log.error(f"ERROR occurred: No fucking kb.txt")
                 print("\n\nCRASH DETECTED, CHECK LOGS")
                 Server.Finish()
                 if Server.restartOnCrash:
@@ -1591,7 +1610,7 @@ def main():
         del Server
         Server = None
     else:
-        Log.info("Godfinger initialize error %s" % (MBIIServer.StatusString(int_status)))
+        Log.info("Kaiburr initialize error %s" % (MBIIServer.StatusString(int_status)))
 
     Log.info("The final gunshot was an exclamation mark on everything that had led to this point. I released my finger from the trigger, and it was over.")
 

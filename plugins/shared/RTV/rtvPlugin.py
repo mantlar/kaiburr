@@ -33,9 +33,9 @@
 #      AlliedModders LLC. All rights reserved.  #
 #################################################
 # =================================================================================
-# GODFINGER RTV CREDITS:
+# KAIBURR RTV CREDITS:
 # =================================================================================
-# Godfinger contributors:
+# Kaiburr contributors:
 # 2cwldys (https://github.com/2cwldys),
 # ACHUTA/Mantlar, (https://github.com/mantlar)
 # ViceDice, (https://github.com/ViceDice)
@@ -56,8 +56,8 @@ from random import sample
 from time import sleep, time
 from zipfile import ZipFile
 
-# Import Godfinger Event system and shared libraries
-import godfingerEvent
+# Import Kaiburr Event system and shared libraries
+import kaiburrEvent
 import lib.shared.client as client
 import lib.shared.config as config
 import lib.shared.player as player
@@ -1202,7 +1202,7 @@ class RTV(object):
 
     def OnClientDisconnect(self, eventClient : client.Client, reason : int):
         """Handle client disconnection"""
-        if reason != godfingerEvent.ClientDisconnectEvent.REASON_SERVER_SHUTDOWN:
+        if reason != kaiburrEvent.ClientDisconnectEvent.REASON_SERVER_SHUTDOWN:
             dcPlayerId = eventClient.GetId()
             dcPlayer = self._players[dcPlayerId]
             if dcPlayerId in self._players:
@@ -1411,7 +1411,7 @@ def OnStart():
     
     # Get current map
     serverMap = PluginInstance._serverData.mapName
-    if serverMap == '': # godfinger hasn't initialized map yet
+    if serverMap == '': # kaiburr hasn't initialized map yet
         serverMap = PluginInstance._serverData.interface.GetCvar("mapname")
     PluginInstance._mapName = serverMap
     
@@ -1508,31 +1508,31 @@ def API_StartRTVVote(allowNoChange=True):
     return False
 
 def OnEvent(event) -> bool:
-    """Route Godfinger events to appropriate handlers"""
+    """Route Kaiburr events to appropriate handlers"""
     global PluginInstance
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return PluginInstance.OnChatMessage( event.client, event.message, event.teamId )
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return PluginInstance.OnClientConnect( event.client)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         return PluginInstance.OnClientChange( event.client, event.data )
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return PluginInstance.OnClientDisconnect( event.client, event.reason )
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         return PluginInstance.OnServerInit(event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         return PluginInstance.OnServerShutdown()
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         return PluginInstance.OnClientKill(event.client, event.victim, event.weaponStr)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER:
         return PluginInstance.OnPlayer(event.client, event.data["text"] if "text" in event.data else "")
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_EXIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_EXIT:
         return PluginInstance.OnExit(event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
         return PluginInstance.OnMapChange(event.mapName, event.oldMapName)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SERVER_EMPTY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SERVER_EMPTY:
         return PluginInstance.OnEmptyServer(event.data, event.isStartup)    
     return False
 
@@ -1581,7 +1581,7 @@ def GetAllMaps() -> list[Map]:
 
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()
 

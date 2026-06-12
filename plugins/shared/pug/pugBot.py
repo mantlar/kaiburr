@@ -1,5 +1,5 @@
 import logging
-import godfingerEvent
+import kaiburrEvent
 import pluginExports
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
@@ -677,7 +677,7 @@ async def shutdown_bot():
 
 def check_if_gittracker_used():
     base_dir = os.path.join(os.path.dirname(__file__))
-    cfg_path = os.path.normpath(os.path.join(base_dir, '..', '..', '..', 'godfingerCfg.json'))
+    cfg_path = os.path.normpath(os.path.join(base_dir, '..', '..', '..', 'kaiburrCfg.json'))
 
     Log.info(f"Checking for 'gittracker' in config file: {cfg_path}")
 
@@ -693,19 +693,19 @@ def check_if_gittracker_used():
             for plugin_entry in config_data["Plugins"]:
                 if isinstance(plugin_entry, dict) and "path" in plugin_entry:
                     if "gittracker" in plugin_entry["path"]:
-                        Log.info("'gittracker' found in a plugin path within godfingerCfg.json.")
+                        Log.info("'gittracker' found in a plugin path within kaiburrCfg.json.")
                         return True
-            Log.info("'gittracker' not found in any plugin path within godfingerCfg.json.")
+            Log.info("'gittracker' not found in any plugin path within kaiburrCfg.json.")
             return False
         else:
-            Log.warning("No 'Plugins' list found or 'Plugins' is not a list in godfingerCfg.json.")
+            Log.warning("No 'Plugins' list found or 'Plugins' is not a list in kaiburrCfg.json.")
             return False
 
     except json.JSONDecodeError as e:
-        Log.error(f"Error decoding godfingerCfg.json at {cfg_path}: {e}", exc_info=True)
+        Log.error(f"Error decoding kaiburrCfg.json at {cfg_path}: {e}", exc_info=True)
         return False
     except Exception as e:
-        Log.error(f"An unexpected error occurred while reading godfingerCfg.json at {cfg_path}: {e}", exc_info=True)
+        Log.error(f"An unexpected error occurred while reading kaiburrCfg.json at {cfg_path}: {e}", exc_info=True)
         return False
 
 def ClearExistingQueue():
@@ -794,21 +794,21 @@ def OnFinish():
 def OnEvent(event) -> bool:
     global player_queue, last_queue_clear_time, game_in_progress, SERVER_EMPTIED
 
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
 
         if SERVER_EMPTIED:
             SERVER_EMPTIED = False
 
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SERVER_EMPTY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SERVER_EMPTY:
 
         if player_queue or game_in_progress:
             Log.info("Server is empty, clearing any active PUG queue and applying cooldown.")
@@ -830,7 +830,7 @@ def OnEvent(event) -> bool:
         SERVER_EMPTIED = True
 
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
 
         if game_in_progress:
             if check_persist_file_exists():
@@ -842,15 +842,15 @@ def OnEvent(event) -> bool:
                 game_in_progress = True
 
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_EXIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_EXIT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
 
         if game_in_progress:
             Log.debug(f"MAPCHANGE event detected. Game was in progress. Triggering repeated game_in_progress assertion.")
@@ -864,13 +864,13 @@ def OnEvent(event) -> bool:
                 Log.info(f"MAPCHANGE: Created persist file to preserve game_in_progress state across map change")
 
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_POST_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_REAL_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_REAL_INIT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER_SPAWN:
         return False
 
     return False

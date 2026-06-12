@@ -123,7 +123,7 @@ while depth < max_depth:
     # If we've reached the root directory, check for depth limit
     if current_dir == os.path.abspath(os.sep):
         print(f"[AUTO-START] {target_file} not found in any parent directories!")
-        print(f"[AUTO-START] Ensure godfinger installation is placed in a recursive subdirectory of JKA/GameData for automated starts.")
+        print(f"[AUTO-START] Ensure kaiburr installation is placed in a recursive subdirectory of JKA/GameData for automated starts.")
         break
 
     # If we've reached the max depth
@@ -134,4 +134,4 @@ while depth < max_depth:
 # If we reach here, file isn't found within the depth limit
 if depth >= max_depth:
     print(f"[AUTO-START] Could not find {target_file} after {max_depth} attempts.")
-    print(f"[AUTO-START] Ensure godfinger installation is placed in a recursive subdirectory of JKA/GameData for automated starts.")
+    print(f"[AUTO-START] Ensure kaiburr installation is placed in a recursive subdirectory of JKA/GameData for automated starts.")

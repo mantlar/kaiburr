@@ -1,8 +1,9 @@
 import lib.shared.rcon as rcon
 import lib.shared.colors as colors
-import godfingerinterface
+import kaiburrinterface
 
 class Cvar():
+
 
     CVAR_NONE           = 0x00000000
     CVAR_ARCHIVE        = 0x00000001
@@ -100,7 +101,7 @@ class Cvar():
 
 
 class CvarManager():
-    def __init__(self, iface : godfingerinterface.IServerInterface):
+    def __init__(self, iface : kaiburrinterface.IServerInterface):
         self._cvars = dict[str, Cvar]()
         self._iface = iface
     

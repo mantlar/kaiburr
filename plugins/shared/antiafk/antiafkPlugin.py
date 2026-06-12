@@ -1,4 +1,4 @@
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.client as client
 import lib.shared.teams as teams
 import lib.shared.colors as colors
@@ -423,37 +423,37 @@ def OnEvent(event) -> bool:
     """Route events to appropriate handlers"""
     global PluginInstance
     
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return PluginInstance.OnClientConnect(event.client)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         return PluginInstance.OnClientChange(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return PluginInstance.OnClientDisconnect(event.client, event.reason)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         return PluginInstance.OnServerInit(event.data, event.isStartup)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_EXIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_EXIT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
         return PluginInstance.OnMapChange(event.mapName, event.oldMapName)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_POST_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_REAL_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_REAL_INIT:
         return False
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER_SPAWN:
         return PluginInstance.OnPlayerSpawn(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_LOGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_LOGIN:
         return PluginInstance.OnSmodLogin({"smod_name" : event.playerName, "smod_id" : event.smodID, "admin_ip" : event.adminIP})
     
     return False

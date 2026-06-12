@@ -1,5 +1,5 @@
 #   MBII Elo System
-#   An Elo system for the Godfinger Movie Battles II plugin system
+#   An Elo system for the Kaiburr Movie Battles II plugin system
 #   By Mantlar/ACHUTA https://www.github.com/mantlar
 #   Plugin Dependencies (must be loaded before this in load order!): AccountSystem
 #
@@ -12,9 +12,9 @@ import json
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
-# Godfinger imports
-import godfingerEvent
-from godfingerEvent import Event
+# Kaiburr imports
+import kaiburrEvent
+from kaiburrEvent import Event
 from lib.shared.serverdata import ServerData
 from lib.shared.player import Player
 import lib.shared.teams as teams
@@ -915,21 +915,21 @@ def OnEvent(event) -> bool:
         if hasattr(event, 'type'):
             event_type = event.type
             
-            if event_type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+            if event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
                 elo_plugin._on_chat_message(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
                 elo_plugin._on_smsay(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
                 elo_plugin._on_client_connect(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
                 elo_plugin._on_client_disconnect(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
                 elo_plugin._on_kill(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
                 elo_plugin._on_server_init(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
                 elo_plugin._on_server_shutdown(event)
-            elif event_type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+            elif event_type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
                 elo_plugin._on_client_changed(event)
                 
     except Exception as e:
@@ -945,6 +945,6 @@ def OnShutdown():
         Log.info("Elo plugin shutdown complete")
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()

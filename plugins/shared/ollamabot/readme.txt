@@ -1,4 +1,4 @@
-Ollamabot Godfinger Plugin
+Ollamabot Kaiburr Plugin
 
 This plugin intercepts chat messages and uses a local Ollama instance to generate AI responses.
 
@@ -7,7 +7,7 @@ Requirements:
 - A local Ollama instance running on your machine (or accessible over the network).
 
 Installation:
-1. Add "plugins.shared.ollamabot.ollamabotPlugin" to the "Plugins" list in "godfingerCfg.json".
+1. Add "plugins.shared.ollamabot.ollamabotPlugin" to the "Plugins" list in "kaiburrCfg.json".
 2. Edit "plugins/shared/ollamabot/ollamabotCfg.json" to configure:
    - model: The model you have pulled in Ollama (e.g., "llama3").
    - system_prompt: The persona the AI will take on.

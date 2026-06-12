@@ -24,7 +24,7 @@ import logging
 from datetime import datetime
 from time import time
 
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config
 import lib.shared.client as client
@@ -297,7 +297,7 @@ class BouncerPlugin:
             return False
 
 
-# Module-level functions required by Godfinger
+# Module-level functions required by Kaiburr
 
 def OnInitialize(serverData: serverdata.ServerData, exports=None) -> bool:
     """Called once when plugin loads"""
@@ -361,12 +361,12 @@ def OnEvent(event) -> bool:
     global PluginInstance
 
     try:
-        if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+        if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
             if event.isStartup:
                 return False
             return PluginInstance.OnClientBegin(event.client, event.data)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
             return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message)
 
     except Exception as e:
@@ -376,7 +376,7 @@ def OnEvent(event) -> bool:
 
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system.")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system.")
     print("Please run one of the start scripts in the start directory to use it.")
     input("Press Enter to close this message.")
     exit()

@@ -22,7 +22,7 @@ import logging
 from time import time
 from math import ceil
 
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config
 import lib.shared.client as client
@@ -714,7 +714,7 @@ class VotekickPlugin:
         Log.info("VoteKick plugin stopped")
 
 
-# Module-level functions required by Godfinger
+# Module-level functions required by Kaiburr
 
 def OnInitialize(serverData: serverdata.ServerData, exports=None) -> bool:
     """Called once when plugin loads"""
@@ -787,19 +787,19 @@ def OnEvent(event) -> bool:
     global PluginInstance
 
     try:
-        if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+        if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
             return PluginInstance.OnChatMessage(event.client, event.message, event.teamId)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
             return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
             return PluginInstance.OnClientDisconnect(event.client, event.reason)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_LOGIN:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_LOGIN:
             return PluginInstance.OnSmodLogin(event.playerName, event.smodID, event.adminIP)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_COMMAND:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_COMMAND:
             return PluginInstance.OnSmodCommand(event.data)
 
     except Exception as e:
@@ -809,7 +809,7 @@ def OnEvent(event) -> bool:
 
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system.")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system.")
     print("Please run one of the start scripts in the start directory to use it.")
     input("Press Enter to close this message.")
     exit()

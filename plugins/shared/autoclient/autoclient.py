@@ -21,7 +21,7 @@ import random
 import string
 from time import time
 
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config
 import lib.shared.client as client
@@ -722,16 +722,16 @@ def OnEvent(event) -> bool:
     """Handle server events"""
     global PluginInstance
 
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return PluginInstance.OnClientConnect(event.client)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return PluginInstance.OnClientDisconnect(event.client, event.reason)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message)
 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_WD_DIED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_WD_DIED:
         # Server process died - kill all fake clients
         count = PluginInstance._RemoveAllFakeClients()
         if count > 0:
@@ -742,7 +742,7 @@ def OnEvent(event) -> bool:
 
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system.")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system.")
     print("Please run one of the start scripts in the start directory to use it.")
     input("Press Enter to close this message.")
     exit()

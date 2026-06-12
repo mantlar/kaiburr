@@ -1,5 +1,5 @@
 #   AccountSystem
-#   An account system for the Godfinger Movie Battles II plugin system
+#   An account system for the Kaiburr Movie Battles II plugin system
 #   By Mantlar/ACHUTA https://www.github.com/mantlar
 #   Plugin Dependencies (must be loaded before this in load order!):
 #
@@ -8,13 +8,13 @@ import logging
 import os
 from time import time
 from typing import Dict, List, Optional
-from godfingerEvent import Event
+from kaiburrEvent import Event
 from lib.shared.serverdata import ServerData
 from database import DatabaseManager
 from lib.shared.player import Player
 import lib.shared.teams as teams
 import lib.shared.colors as colors
-import godfingerEvent
+import kaiburrEvent
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "login.db")
 DB_NAME = os.path.basename(DB_PATH)
@@ -621,12 +621,12 @@ def OnEvent(event: Event) -> bool:
     if not account_plugin:
         return False
 
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         account_plugin._on_client_connect(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         account_plugin._on_client_disconnect(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         account_plugin._on_chat_message(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         account_plugin._on_client_changed(event)
     return False

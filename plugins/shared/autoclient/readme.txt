@@ -43,7 +43,7 @@ for any setting that might be overriding g_anticheat back to 1.
 
 ** IMPORTANT: TOGGLE AUTOCLIENT.CFG **
 -----------------------------------
-Change the value from 0 to 1, in godfinger/start/autoclient.cfg, in order for
+Change the value from 0 to 1, in kaiburr/start/autoclient.cfg, in order for
 this plugin to function properly, and as anticipated.
 
 
@@ -152,7 +152,7 @@ If the server process is not detected, clients will not be spawned.
 STANDALONE TEST SCRIPT
 ----------------------
 A standalone test script (spawnClient.py) is included for testing client
-spawning without Godfinger:
+spawning without Kaiburr:
 
 Usage:
   python spawnClient.py --exe "C:/Path/To/mbii.x86.exe" --ip "127.0.0.1" --count 3

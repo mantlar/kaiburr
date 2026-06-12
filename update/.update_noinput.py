@@ -10,7 +10,7 @@ import sys
 import json
 
 # Repository details
-REPO_URL = "https://github.com/MBII-Galactic-Conquest/godfinger"
+REPO_URL = "https://github.com/MBII-Galactic-Conquest/kaiburr"
 REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../")
 CFG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commit.cfg")
 COMMIT_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commit.env")
@@ -117,7 +117,7 @@ def check_git_installed():
 
 def start():
     # Prompt user for update
-    user_choice = input("Do you wish to check for Godfinger updates? (Y/N): ").strip().lower()
+    user_choice = input("Do you wish to check for Kaiburr updates? (Y/N): ").strip().lower()
     if user_choice != 'y':
         exit(0)  # Exit if the user does not want to update
 
@@ -229,5 +229,5 @@ if __name__ == "__main__":
     if check_git_installed() == False:
         sys.exit(0);
 
-    print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in godfinger and all plugins...\n\n")
+    print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in kaiburr and all plugins...\n\n")
     exit(0);

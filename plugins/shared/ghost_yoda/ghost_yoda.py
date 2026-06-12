@@ -1,7 +1,7 @@
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
 import lib.shared.teams as teams
-import godfingerEvent
+import kaiburrEvent
 
 import threading
 import logging
@@ -86,7 +86,7 @@ intents.message_content = True  # Privileged intent - must be enabled in Discord
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-@tree.command(name="sync", description="Link your Discord account to your Godfinger in-game account")
+@tree.command(name="sync", description="Link your Discord account to your Kaiburr in-game account")
 async def sync_command(interaction: discord.Interaction):
     discord_id = str(interaction.user.id)
     
@@ -608,13 +608,13 @@ async def send_chat_log_to_discord(log_msg):
     channel = guild.get_channel(int(DISCORD_CHANNEL_SERVER_CHAT_LOGS))
     if not channel: return
 
-    # Grab Godfinger's standard time string for Discord like [2025-11-05 21:05:38 HST]
+    # Grab Kaiburr's standard time string for Discord like [2025-11-05 21:05:38 HST]
     time_str = datetime.now().strftime("[%Y-%m-%d %H:%M:%S EST]")
     full_msg = f"`{time_str}` {log_msg}"
         
     await channel.send(full_msg)
 
-# --- Godfinger Framework Hooks ---
+# --- Kaiburr Framework Hooks ---
 def OnInitialize(serverData: serverdata.ServerData, exports=None) -> bool:
     global SERVER_DATA, PluginInstance
     SERVER_DATA = serverData
@@ -652,24 +652,24 @@ def OnFinish():
     stop_bot_thread()
 
 def OnEvent(event) -> bool:
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return PluginInstance.ProcessMessage(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         return PluginInstance.ProcessKillEvent(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_COMMAND:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_COMMAND:
         return PluginInstance.ProcessSmodCommand(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMOD_LOGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_LOGIN:
         return PluginInstance.ProcessSmodLogin(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_BANNED_ENTRY_ATTEMPT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_BANNED_ENTRY_ATTEMPT:
         return PluginInstance.HandleBannedEntryAttempt(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SERVER_SAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SERVER_SAY:
         return PluginInstance.ProcessServerSay(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return PluginInstance.ProcessClientConnect(event)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return PluginInstance.ProcessClientDisconnect(event)
     return False
 
 if __name__ == "__main__":
-    print("This is Ghost Yoda for Godfinger.")
+    print("This is Ghost Yoda for Kaiburr.")
     exit()

@@ -6,7 +6,7 @@ import urllib.request
 import urllib.error
 import random
 from time import time
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
 
@@ -368,7 +368,7 @@ def OnFinish():
     pass
 
 def OnEvent(event) -> bool:
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         if PluginInstance:
             return PluginInstance.OnMessage(event.client, event.message)
     return False

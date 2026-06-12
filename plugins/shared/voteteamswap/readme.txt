@@ -1,5 +1,5 @@
 ==============================================================================
-VOTETEAMSWAP PLUGIN FOR GODFINGER
+VOTETEAMSWAP PLUGIN FOR KAIBURR
 Authored by 2cwldys
 ==============================================================================
 
@@ -26,7 +26,7 @@ INSTALLATION
 
 1. Ensure the voteteamswap plugin directory is in: plugins/shared/voteteamswap/
 
-2. Add the plugin to your godfingerCfg.json in the "Plugins" array:
+2. Add the plugin to your kaiburrCfg.json in the "Plugins" array:
    {
        "path": "plugins.shared.voteteamswap.voteteamswap"
    }
@@ -34,7 +34,7 @@ INSTALLATION
 3. Configure the plugin by editing plugins/shared/voteteamswap/voteteamswapCfg.json
    (auto-created with defaults on first run)
 
-4. Restart Godfinger
+4. Restart Kaiburr
 
 ==============================================================================
 CONFIGURATION (voteteamswapCfg.json)
@@ -218,13 +218,13 @@ VOTES NOT COUNTING:
 - Check if vote has already ended
 
 g_teamSwap NOT CHANGING:
-- Check Godfinger logs for errors
+- Check Kaiburr logs for errors
 - Verify server accepts the g_teamSwap cvar
 - Ensure RCON connection is working
 
 CONFLICT WITH OTHER VOTES:
 - All vote plugins check votesInProgress variable
-- If conflict occurs, restart Godfinger to clear state
+- If conflict occurs, restart Kaiburr to clear state
 
 ==============================================================================
 TECHNICAL DETAILS
@@ -236,8 +236,8 @@ FILES:
 - readme.txt: This documentation
 
 EVENTS HANDLED:
-- GODFINGER_EVENT_TYPE_MESSAGE: Chat commands (!voteteamswap, !1, !2)
-- GODFINGER_EVENT_TYPE_SMSAY: SMOD commands (!overridevoteteamswap, !togglevoteteamswap)
+- KAIBURR_EVENT_TYPE_MESSAGE: Chat commands (!voteteamswap, !1, !2)
+- KAIBURR_EVENT_TYPE_SMSAY: SMOD commands (!overridevoteteamswap, !togglevoteteamswap)
 
 SERVER VARIABLES:
 - votesInProgress: Array tracking active votes (shared with RTV, VoteKick, VoteMute)

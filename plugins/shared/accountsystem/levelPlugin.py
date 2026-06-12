@@ -2,7 +2,7 @@ import logging
 import os
 import math
 import json
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.colors as colors
 import lib.shared.config as config
 import lib.shared.teams as teams
@@ -346,7 +346,7 @@ def _on_smsay(event):
     return False
 
 def OnEvent(event) -> bool:
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         if event.client: # killer
             if event.client == event.victim:
                 UpdatePlayerXP(event.client, CFG.get("suicide_xp", -5))
@@ -355,7 +355,7 @@ def OnEvent(event) -> bool:
             else:
                 UpdatePlayerXP(event.client, CFG.get("kill_xp", 10))
                 
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         if event.message.startswith("!"):
             args = event.message[1:].split()
             if args:
@@ -365,7 +365,7 @@ def OnEvent(event) -> bool:
                         handler(event.client, event.teamId, args)
                         break
                         
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return _on_smsay(event)
     
     return False
@@ -377,4 +377,4 @@ def OnFinish():
     pass
 
 if __name__ == "__main__":
-    print("Leveling Plugin for Godfinger.")
+    print("Leveling Plugin for Kaiburr.")

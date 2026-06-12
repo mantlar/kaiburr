@@ -1,13 +1,13 @@
 import threading
 import lib.shared.pk3 as pk3;
-import godfingerAPI;
+import kaiburrAPI;
 import lib.shared.rcon as rcon;
 import cvar;
-import godfingerinterface;
+import kaiburrinterface;
 
 class ServerData():
 
-    def __init__(self, pk3mngr : pk3.Pk3Manager, cvarManager : cvar.CvarManager, API : godfingerAPI.API, iface : godfingerinterface.IServerInterface, args, mbiiPath=""):
+    def __init__(self, pk3mngr : pk3.Pk3Manager, cvarManager : cvar.CvarManager, API : kaiburrAPI.API, iface : kaiburrinterface.IServerInterface, args, mbiiPath=""):
         self.pk3Manager = pk3mngr;
         self.cvarManager = cvarManager;
         self.API = API;

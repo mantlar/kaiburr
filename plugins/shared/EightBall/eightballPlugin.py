@@ -3,8 +3,8 @@ import logging
 import os
 import random
 
-# Import Godfinger Event system and shared libraries
-import godfingerEvent
+# Import Kaiburr Event system and shared libraries
+import kaiburrEvent
 import lib.shared.client as client
 import lib.shared.config as config
 import lib.shared.player as player
@@ -188,19 +188,19 @@ def OnInitialize(serverData : serverdata.ServerData, exports=None):
 
 def OnEvent(event) -> bool:
     global PluginInstance
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return PluginInstance.OnChatMessage(event.client, event.message, event.teamId)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return PluginInstance.OnClientConnect(event.client)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return PluginInstance.OnClientDisconnect(event.client, event.reason)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         return False # no round start needed
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         return False
     return False
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system.")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system.")
     input("Press Enter to close this message.")
     exit()

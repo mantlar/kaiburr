@@ -1,7 +1,7 @@
 Created by 2cwldys
 ===================
 
-A discord bot plugin that runs in sync with your godfinger installation, allowing pick up game services for JKA.
+A discord bot plugin that runs in sync with your kaiburr installation, allowing pick up game services for JKA.
 
 https://discord.com/developers/
 

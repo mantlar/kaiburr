@@ -1,6 +1,6 @@
 
 import logging
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config
 import lib.shared.client as client
@@ -959,28 +959,28 @@ def OnFinish():
 # Called from system on some event raising, return True to indicate event being captured in this module, False to continue tossing it to other plugins in chain
 def OnEvent(event) -> bool:
     global PluginInstance
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         if event.isStartup:
             return False  # Ignore startup messages
         else:
             return PluginInstance.OnClientConnect(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
         if event.isStartup:
             return False  # Ignore startup messages
         else:
             return PluginInstance.OnClientBegin(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         if event.isStartup:
             return False  # Ignore startup messages
         else:
             return PluginInstance.OnClientChanged(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_ONNAMECHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_ONNAMECHANGE:
         if event.isStartup:
             return False  # Ignore startup messages
         else:
             # Use the same handler - it already has name change logic
             return PluginInstance.OnClientChanged(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         if event.isStartup:
             return False  # Ignore startup messages
         else:
@@ -989,6 +989,6 @@ def OnEvent(event) -> bool:
 
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()

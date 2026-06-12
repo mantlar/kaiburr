@@ -1,10 +1,10 @@
-# Godfinger RTV/RTM Plugin Configuration Guide
+# Kaiburr RTV/RTM Plugin Configuration Guide
 
-*Godfinger Plugin Engine created by 2cwldys, ACHUTA / Mantlar, and ViceDice*
+*Kaiburr Plugin Engine created by 2cwldys, ACHUTA / Mantlar, and ViceDice*
 
 *RTV Plugin Created by ACHUTA / Mantlar*
 
-This document explains the configuration options for the RTV/RTM plugin for the Godfinger Movie Battles II scripting engine. The configuration file is in JSON format and allows you to customize various aspects of the plugin's behavior.
+This document explains the configuration options for the RTV/RTM plugin for the Kaiburr Movie Battles II scripting engine. The configuration file is in JSON format and allows you to customize various aspects of the plugin's behavior.
 
 ## General Settings
 
@@ -164,4 +164,4 @@ This document explains the configuration options for the RTV/RTM plugin for the 
 
 ## Feedback
 
-If you have suggestions or need help with the configuration, feel free to reach out to the plugin author or create an issue on the Godfinger GitHub repository (https://github.com/MBII-Galactic-Conquest/godfinger/).
+If you have suggestions or need help with the configuration, feel free to reach out to the plugin author or create an issue on the Kaiburr GitHub repository (https://github.com/MBII-Galactic-Conquest/kaiburr/).

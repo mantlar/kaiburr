@@ -8,7 +8,7 @@ import psutil # Ensure you have psutil installed: pip install psutil
 # Define the process names to target
 MBIIDED_PROCESS_NAME_WIN = "mbiided.x86.exe"
 MBIIDED_PROCESS_NAME_LINUX = "mbiided.i386"
-GODFINGER_PROCESS_MARKER = "godfinger.py" # Used to find the main Godfinger Python process
+KAIBURR_PROCESS_MARKER = "kaiburr.py" # Used to find the main Kaiburr Python process
 
 # Global wait parameters (can be tuned here if needed)
 PROCESS_CHECK_INTERVAL = 1.0 # How often to check for processes in seconds
@@ -37,18 +37,18 @@ def log_debug(message):
 
 # --- Path Helper Function ---
 
-def get_godfinger_app_root_dir():
+def get_kaiburr_app_root_dir():
     """
-    Calculates and returns the absolute path to the 'godfinger/' root directory.
-    This function assumes hardrestart.py is located at 'godfinger/lib/other/hardrestart.py'.
+    Calculates and returns the absolute path to the 'kaiburr/' root directory.
+    This function assumes hardrestart.py is located at 'kaiburr/lib/other/hardrestart.py'.
     """
     # Get the directory of the current script (hardrestart.py)
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     log_debug(f"Current script directory: {current_script_dir}")
 
-    # Go up two levels to reach the 'godfinger/' root
+    # Go up two levels to reach the 'kaiburr/' root
     app_root_dir = os.path.abspath(os.path.join(current_script_dir, '..', '..'))
-    log_info(f"Calculated Godfinger application root directory: {app_root_dir}")
+    log_info(f"Calculated Kaiburr application root directory: {app_root_dir}")
     return app_root_dir
 
 
@@ -62,7 +62,7 @@ def terminate_target_process(process_name, cmdline_marker=None, cwd_check_path=N
     Args:
         process_name (str): The expected base name of the process (e.g., "python", "mbiided.x86.exe").
         cmdline_marker (str, optional): A unique string found in the process's command line
-                                        (e.g., "godfinger.py" for Python scripts).
+                                        (e.g., "kaiburr.py" for Python scripts).
         cwd_check_path (str, optional): An absolute path. If provided, processes will only be targeted
                                         if their Current Working Directory (CWD) is within or contains
                                         this path. Crucial for identifying specific Python scripts.
@@ -336,7 +336,7 @@ def launch_quickstart_linux_macOS(app_root_dir):
         
         # Fallback to nohup if no graphical terminal was found or launched
         if not launched_graphical:
-            log_warning("No suitable graphical terminal found. Attempting to run Godfinger directly in background with nohup.")
+            log_warning("No suitable graphical terminal found. Attempting to run Kaiburr directly in background with nohup.")
             try:
                 log_info(f"Launching with nohup: nohup bash {script_path} >/dev/null 2>&1 & (CWD: {app_root_dir})")
                 subprocess.Popen(["nohup", "bash", script_path, ">/dev/null", "2>&1", "&"], 
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     log_info("--- hardrestart.py: Script Started ---")
     log_info(f"Current working directory of hardrestart.py: {os.getcwd()}")
 
-    godfinger_root_dir = get_godfinger_app_root_dir()
+    kaiburr_root_dir = get_kaiburr_app_root_dir()
 
     # 1. Terminate the mbiided process
     mbiided_name = MBIIDED_PROCESS_NAME_WIN if sys.platform.startswith('win') else MBIIDED_PROCESS_NAME_LINUX
@@ -370,37 +370,37 @@ if __name__ == "__main__":
     else:
         log_info("mbiided process not found or termination not required.")
 
-    # 2. Terminate the main Godfinger Python process
-    log_info(f"\nPhase 2: Attempting to terminate Godfinger Python process (marker: '{GODFINGER_PROCESS_MARKER}')...")
+    # 2. Terminate the main Kaiburr Python process
+    log_info(f"\nPhase 2: Attempting to terminate Kaiburr Python process (marker: '{KAIBURR_PROCESS_MARKER}')...")
     
     current_os_python_base_name = "python" # This will match python.exe, python3.x etc.
     
-    godfinger_terminated = terminate_target_process(
+    kaiburr_terminated = terminate_target_process(
         process_name=current_os_python_base_name, 
-        cmdline_marker=GODFINGER_PROCESS_MARKER, 
-        cwd_check_path=godfinger_root_dir # Crucial for specific Godfinger identification
+        cmdline_marker=KAIBURR_PROCESS_MARKER, 
+        cwd_check_path=kaiburr_root_dir # Crucial for specific Kaiburr identification
     )
     
-    if godfinger_terminated:
-        log_info("Waiting for Godfinger Python process to fully exit...")
+    if kaiburr_terminated:
+        log_info("Waiting for Kaiburr Python process to fully exit...")
         wait_for_process_to_exit(
             process_name=current_os_python_base_name, 
-            cmdline_marker=GODFINGER_PROCESS_MARKER, 
-            cwd_check_path=godfinger_root_dir
+            cmdline_marker=KAIBURR_PROCESS_MARKER, 
+            cwd_check_path=kaiburr_root_dir
         )
     else:
-        log_info("Godfinger Python process not found or termination not required.")
+        log_info("Kaiburr Python process not found or termination not required.")
 
     # 3. Apply a final grace period for OS resource cleanup
     log_info(f"\nPhase 3: Applying a {POST_TERMINATION_GRACE_PERIOD}s grace period for OS resource cleanup.")
     time.sleep(POST_TERMINATION_GRACE_PERIOD)
 
     # 4. Run the appropriate quickstart script
-    log_info("\nPhase 4: All processes terminated. Initiating Godfinger quickstart.")
+    log_info("\nPhase 4: All processes terminated. Initiating Kaiburr quickstart.")
     if sys.platform.startswith('win'):
-        launch_quickstart_win(godfinger_root_dir)
+        launch_quickstart_win(kaiburr_root_dir)
     else:
-        launch_quickstart_linux_macOS(godfinger_root_dir)
+        launch_quickstart_linux_macOS(kaiburr_root_dir)
             
-    log_info("\n--- Godfinger restart procedure completed. Check new console for Godfinger output ---")
+    log_info("\n--- Kaiburr restart procedure completed. Check new console for Kaiburr output ---")
     sys.exit(0)

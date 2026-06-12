@@ -77,14 +77,14 @@ set logfile          "2"
 | Windows | `start\win\start_win.bat` |
 | Linux / macOS | `start/linux_macOS/start_linux_macOS.sh` |
 
-On first run, a `godfingerCfg.json` will be generated in the root directory. Fill in your server's RCON password, IP, port, and MBII path, then restart.
+On first run, a `kaiburrCfg.json` will be generated in the root directory. Fill in your server's RCON password, IP, port, and MBII path, then restart.
 
 ---
 
 ## 📖 Documentation
 
 <details>
-<summary><strong>📋 Configuration Reference (godfingerCfg.json)</strong></summary>
+<summary><strong>📋 Configuration Reference (kaiburrCfg.json)</strong></summary>
 
 <br>
 
@@ -143,7 +143,7 @@ On first run, a `godfingerCfg.json` will be generated in the root directory. Fil
 
 <br>
 
-Plugins are loaded as Python packages via `godfingerCfg.json`:
+Plugins are loaded as Python packages via `kaiburrCfg.json`:
 
 ```json
 {
@@ -249,7 +249,7 @@ kaiburr/
 └── (project root)
 
 configstore_kaiburr/        # Your config overlay
-├── godfingerCfg.json
+├── kaiburrCfg.json
 └── plugins/
     └── shared/
         └── myplugin/
@@ -272,7 +272,7 @@ Deploy private plugin codebases using [SSH deploy keys](https://docs.gitlab.com/
    {user}/{repo}/{branch}=./key/{keyfile}
    ```
 3. Each entry generates a folder in `./update/deploy/<foldername>/`
-4. Add the deploy path to `godfingerCfg.json`:
+4. Add the deploy path to `kaiburrCfg.json`:
    ```json
    {
        "paths": [

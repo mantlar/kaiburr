@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 import logging
 
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.client as client
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
@@ -458,7 +458,7 @@ class AutomodPlugin:
             return False
 
 
-# Module-level functions required by Godfinger
+# Module-level functions required by Kaiburr
 
 def OnInitialize(serverData: serverdata.ServerData, exports=None) -> bool:
     """Called once when plugin loads"""
@@ -523,15 +523,15 @@ def OnEvent(event) -> bool:
     global PluginInstance
 
     try:
-        if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+        if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
             if event.isStartup:
                 return False
             return PluginInstance.OnMessage(event.client, event.message, event.teamId, event.data)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
             return PluginInstance.OnMapChange(event.mapName, event.oldMapName)
 
-        elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+        elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
             return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message)
 
     except Exception as e:

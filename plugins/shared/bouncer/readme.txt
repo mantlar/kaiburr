@@ -1,5 +1,5 @@
 ==============================================================================
-BOUNCER PLUGIN FOR GODFINGER
+BOUNCER PLUGIN FOR KAIBURR
 Authored by 2cwldys and Hera
 ==============================================================================
 
@@ -28,7 +28,7 @@ INSTALLATION
 
 1. Ensure the bouncer plugin directory is in: plugins/shared/bouncer/
 
-2. Add the plugin to your godfingerCfg.json in the "Plugins" array:
+2. Add the plugin to your kaiburrCfg.json in the "Plugins" array:
    {
        "path": "plugins.shared.bouncer.bouncer"
    }
@@ -36,7 +36,7 @@ INSTALLATION
 3. Configure the plugin by editing plugins/shared/bouncer/bouncerCfg.json
    (auto-created with defaults on first run)
 
-4. Restart Godfinger
+4. Restart Kaiburr
 
 ==============================================================================
 CONFIGURATION (bouncerCfg.json)
@@ -155,7 +155,7 @@ FIELDS:
 
 This data persists across:
 - Map changes
-- Godfinger restarts
+- Kaiburr restarts
 - Server restarts
 
 ==============================================================================
@@ -204,7 +204,7 @@ SILENT MODE
 When silentMode is enabled (set to true):
 - No private messages sent to new players
 - Punishments still apply silently
-- All logging still occurs normally in Godfinger logs
+- All logging still occurs normally in Kaiburr logs
 - Best for: Stealth enforcement where you don't want players to know
 
 When silentMode is disabled (set to false):
@@ -240,28 +240,28 @@ TROUBLESHOOTING
 ==============================================================================
 
 PLUGIN NOT LOADING:
-- Check godfingerCfg.json has correct plugin entry
-- Check Godfinger logs for error messages
+- Check kaiburrCfg.json has correct plugin entry
+- Check Kaiburr logs for error messages
 - Verify plugin files exist in plugins/shared/bouncer/
 
 NEW PLAYERS NOT BEING PUNISHED:
 - Check "enabled": true in bouncerCfg.json
 - Check player IP is not already in ipList.json
-- Check Godfinger logs for "New IP detected" messages
+- Check Kaiburr logs for "New IP detected" messages
 - Verify action value is valid (0, 1, or 2)
 
 RETURNING PLAYERS BEING PUNISHED:
 - This should not happen if plugin is working correctly
 - Check ipList.json contains their IP
-- Check for Godfinger errors in logs
+- Check for Kaiburr errors in logs
 
 DUPLICATE PUNISHMENTS WITH ANTIPADAWAN:
 - Bouncer should automatically skip if antipadawan handles the player
 - Verify antipadawan config file exists and is enabled
-- Check Godfinger logs for "antipadawan will handle" messages
+- Check Kaiburr logs for "antipadawan will handle" messages
 
 SMOD COMMAND NOT APPEARING IN !help:
-- Restart Godfinger to register commands
+- Restart Kaiburr to register commands
 - Check no errors in logs during plugin initialization
 
 ==============================================================================
@@ -275,8 +275,8 @@ FILES:
 - readme.txt: This documentation
 
 EVENTS HANDLED:
-- GODFINGER_EVENT_TYPE_CLIENT_BEGIN: Player makes it into the game
-- GODFINGER_EVENT_TYPE_SMSAY: SMOD admin commands
+- KAIBURR_EVENT_TYPE_CLIENT_BEGIN: Player makes it into the game
+- KAIBURR_EVENT_TYPE_SMSAY: SMOD admin commands
 
 DATA STORAGE:
 - IP list: JSON file, persists across restarts
@@ -295,6 +295,6 @@ COMPATIBILITY
 This plugin is designed to work alongside:
 - Antipadawan plugin (automatic integration, avoids duplicate punishments)
 - Automod plugin (no conflicts, different event handling)
-- Other Godfinger plugins (no shared resources)
+- Other Kaiburr plugins (no shared resources)
 
 ==============================================================================

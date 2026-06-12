@@ -1,18 +1,18 @@
 version: "3.8"
 
 services:
-  godfinger:
+  kaiburr:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: godfinger_server
+    container_name: kaiburr_server
     volumes:
       # Mount Jedi Academy base installation
       - ../../dockerize:/app/jediacademy
-      # Mount godfinger source code
-      - ..:/app/jediacademy/gamedata/godfinger
+      # Mount kaiburr source code
+      - ..:/app/jediacademy/gamedata/kaiburr
       # Mount persistent config storage (overlays specific config files)
-      - ../../configstore_godfinger:/app/jediacademy/gamedata/godfinger
+      - ../../configstore_kaiburr:/app/jediacademy/gamedata/kaiburr
     ports:
       - "29070:29070/udp"
       - "29070:29070/tcp"

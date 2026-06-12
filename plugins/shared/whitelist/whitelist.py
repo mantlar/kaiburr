@@ -1,7 +1,7 @@
 
 import logging
 from time import time
-import godfingerEvent
+import kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config
 import lib.shared.client as client
@@ -376,16 +376,16 @@ def OnFinish():
 # Called from system on some event raising, return True to indicate event being captured in this module, False to continue tossing it to other plugins in chain
 def OnEvent(event) -> bool:
     global PluginInstance
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         if event.isStartup:
             return False # Ignore startup messages
         else:
             return PluginInstance.OnClientConnect(event.client, event.data)
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message)
     return False
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()

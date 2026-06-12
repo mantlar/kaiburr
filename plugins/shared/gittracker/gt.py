@@ -1,5 +1,5 @@
 import logging;
-import godfingerEvent;
+import kaiburrEvent;
 import pluginExports;
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
@@ -17,7 +17,7 @@ import threading
 import platform
 
 SERVER_DATA = None;
-GODFINGER = "godfinger"
+KAIBURR = "kaiburr"
 Log = logging.getLogger(__name__);
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "gtConfig.json");
@@ -33,7 +33,7 @@ FALSE_VAR = False
 
 MANUALLY_UPDATED = False
 
-def get_godfinger_rwd():
+def get_kaiburr_rwd():
     return os.path.dirname(os.path.abspath(__file__))
 
 if os.name == 'nt':  # Windows
@@ -85,8 +85,8 @@ class gitTrackerPlugin(object):
         self._smodCommandList = \
             {
                 # same as above
-                tuple(["gfupdate", "update"]) : ("!<gfupdate | update> - forcibly run godfinger updates and deployments while restarting", self.HandleUpdate),
-                tuple(["gfrestart", "restart"]) : ("!<gfrestart | restart> - forcibly restart the godfinger script system, without updates", self.HandleRestart),
+                tuple(["gfupdate", "update"]) : ("!<gfupdate | update> - forcibly run kaiburr updates and deployments while restarting", self.HandleUpdate),
+                tuple(["gfrestart", "restart"]) : ("!<gfrestart | restart> - forcibly restart the kaiburr script system, without updates", self.HandleRestart),
                 tuple(["hardupdate", "hardupdate"]) : ("<0/1> - when set to 1, determines if the mbiided process is forcibly restarted when forcing updates", self.HandleHardUpdate),
                 tuple(["build", "build"]) : ("!<build <git|svn|winscp> [true|false]> - check or set build status for git, svn, or winscp", self.HandleBuilding)
             }
@@ -103,12 +103,12 @@ class gitTrackerPlugin(object):
             Log.warning(f"SMOD '{playerName}' (ID: {smodID}, IP: {adminIP}) requested a hard restart!!")
         else:
             self._serverData.interface.SvSound("sound/sup/bloop.mp3")
-            self._serverData.interface.SvSay(self._messagePrefix + f"^3SMOD has requested a godfinger update.")
-            Log.info(f"SMOD '{playerName}' (ID: {smodID}, IP: {adminIP}) requested godfinger update.")
+            self._serverData.interface.SvSay(self._messagePrefix + f"^3SMOD has requested a kaiburr update.")
+            Log.info(f"SMOD '{playerName}' (ID: {smodID}, IP: {adminIP}) requested kaiburr update.")
 
         ForceUpdate(self, hard_update_override=self._hardUpdateSetting)
 
-        self._serverData.interface.SvSay(self._messagePrefix + "^2Godfinger update process completed.")
+        self._serverData.interface.SvSay(self._messagePrefix + "^2Kaiburr update process completed.")
         self._serverData.interface.SvSound("sound/sup/message.mp3")
         return True
 
@@ -121,9 +121,9 @@ class gitTrackerPlugin(object):
             return False
 
         self._serverData.interface.SvSound("sound/sup/bloop.mp3")
-        self._serverData.interface.SvSay(self._messagePrefix + f"^3SMOD has requested a godfinger restart.")
+        self._serverData.interface.SvSay(self._messagePrefix + f"^3SMOD has requested a kaiburr restart.")
 
-        Log.info(f"SMOD '{playerName}' (ID: {smodID}, IP: {adminIP}) force restarted godfinger...")
+        Log.info(f"SMOD '{playerName}' (ID: {smodID}, IP: {adminIP}) force restarted kaiburr...")
         self._serverData.API.Restart(timeoutSeconds)
         return True
 
@@ -416,9 +416,9 @@ def update_json_if_needed(repo_url, branch_name, commit_hash, commit_message, is
         PluginInstance._serverData.interface.SvSay(PluginInstance._messagePrefix + full_message)
         PluginInstance._serverData.interface.SvSound("sound/sup/message.mp3")
         
-        if isGFBuilding == True and UPDATE_NEEDED == False and GODFINGER in repo_name and gfBuildBranch in branch_name:
-            PluginInstance._serverData.interface.SvSay(PluginInstance._messagePrefix + "^1[!] ^7Godfinger change detected, applying when all players leave the server...")
-            Log.debug(f"Godfinger change intercepted, automatically building '{gfBuildBranch}' and private deployments when all players leave the server...")
+        if isGFBuilding == True and UPDATE_NEEDED == False and KAIBURR in repo_name and gfBuildBranch in branch_name:
+            PluginInstance._serverData.interface.SvSay(PluginInstance._messagePrefix + "^1[!] ^7Kaiburr change detected, applying when all players leave the server...")
+            Log.debug(f"Kaiburr change intercepted, automatically building '{gfBuildBranch}' and private deployments when all players leave the server...")
             UPDATE_NEEDED = True
             return UPDATE_NEEDED
     else:
@@ -605,7 +605,7 @@ def CheckForGITUpdate(isGFBuilding):
     timeoutSeconds = 10
 
     if isGFBuilding and UPDATE_NEEDED:
-        Log.info("Godfinger change detected with isGFBuilding enabled. Triggering update...")
+        Log.info("Kaiburr change detected with isGFBuilding enabled. Triggering update...")
 
         # Run .update_noinput.py
         update_script = os.path.abspath(os.path.join(os.getcwd(), "update", ".update_noinput.py"))
@@ -638,8 +638,8 @@ def CheckForGITUpdate(isGFBuilding):
             Log.error(f"Exception occurred while running cleanup script: {e}")
 
         if not MANUALLY_UPDATED:
-            # Force Godfinger to restart after update
-            Log.info("Auto-update process executed with predefined inputs. Restarting godfinger in ten seconds...")
+            # Force Kaiburr to restart after update
+            Log.info("Auto-update process executed with predefined inputs. Restarting kaiburr in ten seconds...")
             PluginInstance._serverData.API.Restart(timeoutSeconds)
         else:
             pass;
@@ -674,7 +674,7 @@ def CheckForGITUpdate(isGFBuilding):
             Log.error(f"Exception occurred while running cleanup script: {e}")
 
         if not MANUALLY_UPDATED:
-            # Force Godfinger to restart after update
+            # Force Kaiburr to restart after update
             Log.info("Auto-deploy process executed with predefined inputs, restarting in ten seconds...")
             PluginInstance._serverData.API.Restart(timeoutSeconds)
         else:
@@ -683,7 +683,7 @@ def CheckForGITUpdate(isGFBuilding):
 def ForceUpdate(self, hard_update_override):
     global UPDATE_NEEDED, MANUALLY_UPDATED
 
-    rwd = get_godfinger_rwd()
+    rwd = get_kaiburr_rwd()
 
     # Timeout for API.Restart calls
     timeoutSeconds = 10
@@ -712,7 +712,7 @@ def ForceUpdate(self, hard_update_override):
         Log.info("Watchdog temporarily disabled for manual hard restart")
 
         if execute_hard_restart(rwd):
-            Log.info("Manual server restart launched. Exiting current Godfinger & MBIIdedicated server process.")
+            Log.info("Manual server restart launched. Exiting current Kaiburr & MBIIdedicated server process.")
             self._hardUpdateSetting = 0
             sys.exit(0)
         else:
@@ -730,8 +730,8 @@ def execute_hard_restart(rwd):
 
     Log.debug("Manual restart attempted...")
 
-    godfinger_dir = os.getcwd()
-    manual_restart_script_path = os.path.abspath(os.path.join(godfinger_dir, 'lib', 'other', '.hardrestart.py'))
+    kaiburr_dir = os.getcwd()
+    manual_restart_script_path = os.path.abspath(os.path.join(kaiburr_dir, 'lib', 'other', '.hardrestart.py'))
 
     if not os.path.exists(manual_restart_script_path):
         Log.error(f"Manual restart script not found: {manual_restart_script_path}. Cannot proceed with restart.")
@@ -824,47 +824,47 @@ def OnFinish():
 # Called from system on some event raising, return True to indicate event being captured in this module, False to continue tossing it to other plugins in chain
 def OnEvent(event) -> bool:
     #print("Calling OnEvent function from plugin with event %s!" % (str(event)));
-    if event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MESSAGE:
+    if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MESSAGE:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCONNECT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENT_BEGIN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENT_BEGIN:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTCHANGED:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTCHANGED:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_CLIENTDISCONNECT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SERVER_EMPTY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SERVER_EMPTY:
         _, _, _, svnPostHookFile, winSCPScriptFile, isWinSCPBuilding, isSVNBuilding, isGFBuilding = load_config()
         CheckForSVNUpdate(isSVNBuilding, svnPostHookFile)
         CheckForWinSCPUpdate(isWinSCPBuilding, winSCPScriptFile)
         CheckForGITUpdate(isGFBuilding)
         UPDATE_NEEDED = False
         return UPDATE_NEEDED, False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SHUTDOWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_KILL:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_EXIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_EXIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_MAPCHANGE:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_SMSAY:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
         return PluginInstance.OnSmsay(event.playerName, event.smodID, event.adminIP, event.message);
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_POST_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_REAL_INIT:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_REAL_INIT:
         return False;
-    elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER_SPAWN:
         return False;
 
     return False;
 
 if __name__ == "__main__":
-    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    print("This is a plugin for the Kaiburr Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in kaiburrCfg!")
     input("Press Enter to close this message.")
     exit()

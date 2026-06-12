@@ -59,10 +59,10 @@ if exist "%venvp%" (
         exit /b
     )
 
-    REM Run godfinger script
-    python ./godfinger.py -lf "./logs/bigdata.log"
+    REM Run kaiburr script
+    python ./kaiburr.py -lf "./logs/bigdata.log"
     if %errorlevel% neq 0 (
-        echo Error running godfinger.py. Press Enter to exit.
+        echo Error running kaiburr.py. Press Enter to exit.
         pause
         exit /b
     )
