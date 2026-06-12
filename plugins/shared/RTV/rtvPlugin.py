@@ -50,6 +50,7 @@ import json
 import logging
 import os
 import re
+import datetime
 from math import ceil, floor
 from random import sample
 from time import sleep, time
@@ -71,6 +72,7 @@ Log = logging.getLogger(__name__)
 # Global server data instance
 SERVER_DATA = None
 
+
 # Configuration file paths and defaults
 DEFAULT_CFG_JSON = os.path.join(os.path.dirname(__file__), "rtvConfig.json")
 DEFAULT_CFG_YAML = os.path.join(os.path.dirname(__file__), "rtvConfig.yaml")
@@ -90,8 +92,6 @@ CONFIG_FALLBACK = '''{
     "showVoteCooldownTime": 5,
     "maxMapPageSize": 950,
     "maxSearchPageSize": 950,
-    "defaultTeam1": "LEG_Good",
-    "defaultTeam2": "LEG_Evil",
     "rtv": {
         "enabled": true,
         "voteTime": 180,
@@ -139,7 +139,18 @@ CONFIG_FALLBACK = '''{
         "disableRecentMapNomination": true,
         "skipVoting": true,
         "secondTurnVoting": true,
-        "changeImmediately": true
+        "changeImmediately": true,
+        "conditionalMaps": {
+            "enabled": true,
+            "maps": {
+                "mb2_dotf": {
+                    "day": "Sunday",
+                    "playerCountMin": 10,
+                    "playerCountMax": null,
+                    "mbmode": "open"
+                }
+            }
+        }
     },
     "rtm": {
         "enabled": true,
@@ -311,7 +322,8 @@ class MapContainer(object):
         available_maps = []
         for m in self._mapDict.values():
             if m.GetMapName().lower() not in blacklist:
-                available_maps.append(m)
+                if self.plugin._EvaluateMapConditions(m.GetMapName()):
+                    available_maps.append(m)
         
         # Handle edge cases
         if num <= 0:
@@ -603,11 +615,11 @@ class RTV(object):
         """Determine vote winner(s) with tie resolution"""
         winners = self._currentVote.GetWinners()
         
-        if self._ShouldTriggerSecondTurnVoting(voteType, winners):
-            winners = self._AddSecondPlaceToWinners(winners)
-        
         if self._ShouldApplyMapPriority(voteType, winners):
             winners = self._ApplyMapPriorityFiltering(winners)
+            
+        if self._ShouldTriggerSecondTurnVoting(voteType, winners):
+            winners = self._AddSecondPlaceToWinners(winners)
         
         return winners
 
@@ -759,49 +771,6 @@ class RTV(object):
         self.SvSay(f"Switching map to {colors.ColorizeText(mapToChange, self._themeColor)}!")
         if doSleep:
             sleep(1)
-        
-        # Get purchased teams from banking plugin
-        teamsToChange1 = self._serverData.GetServerVar("team1_purchased_teams")
-        teamsToChange2 = self._serverData.GetServerVar("team2_purchased_teams")
-        
-        # Check for team swap
-        vote_team_swap = self._serverData.GetServerVar("voteteamswap_active")
-        
-        # Determine base teams (with swap if active)
-        default_team1 = self._config.cfg.get("defaultTeam1", "LEG_Good")
-        default_team2 = self._config.cfg.get("defaultTeam2", "LEG_Evil")
-        
-        if vote_team_swap:
-            # Swap base teams
-            default_team1, default_team2 = default_team2, default_team1
-
-        if teamsToChange1 != None and len(teamsToChange1) > 0:
-            # Extract names if they are objects (new format), otherwise assume string (old format/fallback)
-            team_names = []
-            for t in teamsToChange1:
-                if hasattr(t, "name"):
-                    team_names.append(t.name)
-                else:
-                    team_names.append(str(t))
-            teamsToChange1 = ' '.join(team_names)
-            self._serverData.interface.SetTeam1(default_team1 + " " + teamsToChange1)
-            self._serverData.SetServerVar("team1_purchased_teams", None)
-        else:
-            self._serverData.interface.SetTeam1(default_team1)
-            
-        if teamsToChange2 != None and len(teamsToChange2) > 0:
-            # Extract names if they are objects (new format), otherwise assume string (old format/fallback)
-            team_names = []
-            for t in teamsToChange2:
-                if hasattr(t, "name"):
-                    team_names.append(t.name)
-                else:
-                    team_names.append(str(t))
-            teamsToChange2 = ' '.join(team_names)
-            self._serverData.interface.SetTeam2(default_team2 + " " + teamsToChange2)
-            self._serverData.SetServerVar("team2_purchased_teams", None)
-        else:
-            self._serverData.interface.SetTeam2(default_team2)
         self._serverData.interface.MapReload(mapToChange)
     
     def HandleChatCommand(self, player : RTVPlayer, teamId : int, cmdArgs : list[str]) -> bool:
@@ -842,6 +811,46 @@ class RTV(object):
             if len(self._wantsToRTV) >= ceil(len(self._players) * self._config.cfg['rtv']['voteRequiredRatio']):
                 self._StartRTVVote()
         return capture
+
+    def _EvaluateMapConditions(self, mapName: str) -> bool:
+        """Evaluate if a conditional map meets its requirements"""
+        conditionalMaps = self._config.cfg["rtv"].get("conditionalMaps", {})
+        if not conditionalMaps.get("enabled", False):
+            return True
+            
+        maps = conditionalMaps.get("maps", {})
+        mapConfig = None
+        for key in maps:
+            if key.lower() == mapName.lower():
+                mapConfig = maps[key]
+                break
+                
+        if not mapConfig:
+            return True
+            
+        currentDay = datetime.datetime.now().strftime("%A")
+        if mapConfig.get("day") is not None and mapConfig.get("day").lower() != currentDay.lower():
+            return False
+            
+        currentPlayers = len(self._serverData.API.GetAllClients())
+        if mapConfig.get("playerCountMin") is not None and currentPlayers < mapConfig.get("playerCountMin"):
+            return False
+        if mapConfig.get("playerCountMax") is not None and currentPlayers > mapConfig.get("playerCountMax"):
+            return False
+            
+        currentModeId = self._serverData.mode
+        currentModeStr = None
+        for name, mode_id in MBMODE_ID_MAP.items():
+            if mode_id == currentModeId:
+                currentModeStr = name
+                break
+                
+        if mapConfig.get("mbmode") is not None:
+            configMode = mapConfig.get("mbmode").lower().replace(' ', '')
+            if currentModeStr is None or currentModeStr != configMode:
+                return False
+                
+        return True
 
     def _StartRTVVote(self, choices=None, allowNoChange=True):
         """Start Rock the Vote process"""
@@ -1005,6 +1014,8 @@ class RTV(object):
                 failReason = f"map {colors.ColorizeText(mapToNom, self._themeColor)} already nominated"
             elif self._config.cfg["rtv"]["allowNominateCurrentMap"] == False and mapToNom.lower() == self._mapName.lower():
                 failReason = "server does not allow nomination of current map"
+            elif not self._EvaluateMapConditions(mapObj.GetMapName()):
+                failReason = "map conditions are not currently met"
             elif mapToNom.lower() in [x[0].lower() for x in self._rtvRecentMaps] and self._config.cfg["rtv"]["disableRecentMapNomination"] == True:
                 timeRemaining = [x[1].LeftDHMS() for x in self._rtvRecentMaps if x[0].lower() == mapToNom.lower()][0]
                 failReason = f"cannot nominate recently played map for {colors.ColorizeText(timeRemaining, self._themeColor)}"
@@ -1423,6 +1434,8 @@ def kickClientIfProtectedName(client : client.Client):
     nameStripped = re.sub(r":|-|\.|,|;|=|\/|\\|\||`|~|\"|'|[|]|(|)|_", "", nameStripped)
     if nameStripped in [x.lower() for x in PluginInstance._config.cfg["protectedNames"]]:
         PluginInstance._serverData.interface.ClientKick(client.GetId()) # indicate plugin start success
+
+PluginInstance: RTV | None = None  
 
 # Called each loop tick from the system
 def OnLoop():

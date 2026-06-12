@@ -67,8 +67,11 @@ class ProcessWatchdog:
     def _GetPid(self) -> int:
         pid = -1;
         for proc in psutil.process_iter():
-            if proc.name() == self._processName:
-                pid = proc.pid;
+            try:
+                if proc.name() == self._processName:
+                    pid = proc.pid;
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
         return pid;
 
     def Start(self):

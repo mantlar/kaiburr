@@ -13,6 +13,7 @@ SMOD Commands:
 
 Non-voters count as NO votes.
 Majority threshold is configurable.
+*** ENSURE THAT THIS PLUGIN IS LOADED AFTER RTV ***
 """
 
 import os
@@ -40,7 +41,9 @@ CONFIG_FALLBACK = """{
     "voteDuration": 60,
     "voteCooldown": 120,
     "silentMode": false,
-    "messagePrefix": "^3[VoteTeamSwap]^7: "
+    "messagePrefix": "^3[VoteTeamSwap]^7: ",
+    "defaultTeam1": "LEG_Good",
+    "defaultTeam2": "LEG_Evil"
 }"""
 
 VoteteamswapConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
@@ -78,6 +81,9 @@ class VoteteamswapPlugin:
                 tuple(["2"]): ("", self.HandleVoteNo),
             }
         }
+
+        # Original MapReload for monkey-patching
+        self._original_MapReload = None
 
         # Runtime enabled state (can be toggled by SMOD)
         self._runtimeEnabled = self.config.cfg.get("enabled", True)
@@ -399,6 +405,8 @@ class VoteteamswapPlugin:
             Log.info("VoteTeamSwap plugin is disabled in configuration")
             return True
 
+        self._HookMapReload()
+
         Log.info("VoteTeamSwap plugin started")
         Log.info(f"Majority threshold: {self.config.cfg.get('majorityThreshold', 0.75) * 100}%")
         Log.info(f"Minimum participation: {self.config.cfg.get('minimumParticipation', 0.5) * 100}%")
@@ -407,9 +415,69 @@ class VoteteamswapPlugin:
 
     def Finish(self):
         """Plugin shutdown"""
+        self._UnhookMapReload()
         if self._activeVote:
             self._UnregisterVote()
         Log.info("VoteTeamSwap plugin stopped")
+
+    # This sucks so much
+    def _HookMapReload(self):
+        if not self._original_MapReload:
+            self._original_MapReload = self._serverData.interface.MapReload
+            
+            def HookedMapReload(mapname: str) -> str:
+                self._ApplyTeamsPreMapReload()
+                return self._original_MapReload(mapname)
+                
+            self._serverData.interface.MapReload = HookedMapReload
+
+    def _UnhookMapReload(self):
+        if self._original_MapReload:
+            self._serverData.interface.MapReload = self._original_MapReload
+            self._original_MapReload = None
+
+    def _ApplyTeamsPreMapReload(self):
+        # Determine base teams
+        default_team1 = self.config.cfg.get("defaultTeam1", "LEG_Good")
+        default_team2 = self.config.cfg.get("defaultTeam2", "LEG_Evil")
+        
+        # Get purchased teams from banking plugin
+        teamsToChange1 = self._serverData.GetServerVar("team1_purchased_teams")
+        teamsToChange2 = self._serverData.GetServerVar("team2_purchased_teams")
+        
+        # Check for team swap
+        vote_team_swap = self._serverData.GetServerVar("voteteamswap_active")
+        
+        if vote_team_swap:
+            # Swap base teams
+            default_team1, default_team2 = default_team2, default_team1
+
+        if teamsToChange1 is not None and len(teamsToChange1) > 0:
+            # Extract names if they are objects, otherwise assume string
+            team_names = []
+            for t in teamsToChange1:
+                if hasattr(t, "name"):
+                    team_names.append(t.name)
+                else:
+                    team_names.append(str(t))
+            teamsToChange1_str = ' '.join(team_names)
+            self._serverData.interface.SetTeam1(default_team1 + " " + teamsToChange1_str)
+            self._serverData.SetServerVar("team1_purchased_teams", None)
+        else:
+            self._serverData.interface.SetTeam1(default_team1)
+            
+        if teamsToChange2 is not None and len(teamsToChange2) > 0:
+            team_names = []
+            for t in teamsToChange2:
+                if hasattr(t, "name"):
+                    team_names.append(t.name)
+                else:
+                    team_names.append(str(t))
+            teamsToChange2_str = ' '.join(team_names)
+            self._serverData.interface.SetTeam2(default_team2 + " " + teamsToChange2_str)
+            self._serverData.SetServerVar("team2_purchased_teams", None)
+        else:
+            self._serverData.interface.SetTeam2(default_team2)
 
 
 # Module-level functions required by Godfinger

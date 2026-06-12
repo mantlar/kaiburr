@@ -12,6 +12,10 @@ import time
 from collections import deque
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import string
+import random
+import json
+from discord import app_commands
 
 # Initialize the Logger
 Log = logging.getLogger(__name__)
@@ -19,8 +23,48 @@ Log = logging.getLogger(__name__)
 # Global variables
 SERVER_DATA = None
 bot_thread = None
+bot_loop = None
 shutdown_event = threading.Event()
 log_watcher_task = None
+
+SYNC_CODES_FILE = os.path.join(os.path.dirname(__file__), "sync_codes.json")
+SYNC_CODES = {} # code -> discord_id
+
+def load_sync_codes():
+    global SYNC_CODES
+    if os.path.exists(SYNC_CODES_FILE):
+        try:
+            with open(SYNC_CODES_FILE, "r") as f:
+                SYNC_CODES = json.load(f)
+        except Exception as e:
+            Log.error(f"Failed to load sync codes: {e}")
+
+def save_sync_codes():
+    try:
+        with open(SYNC_CODES_FILE, "w") as f:
+            json.dump(SYNC_CODES, f)
+    except Exception as e:
+        Log.error(f"Failed to save sync codes: {e}")
+
+def generate_sync_code() -> str:
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+
+def dispatch_discord_coro(coro):
+    global bot_loop
+    if bot_loop is None or not bot_loop.is_running():
+        try:
+            coro.close()
+        except Exception:
+            pass
+        return
+    try:
+        asyncio.run_coroutine_threadsafe(coro, bot_loop)
+    except Exception as e:
+        try:
+            Log.error(f"Error dispatching coro: {e}")
+            coro.close()
+        except Exception:
+            pass
 
 # Chat bridge rate limiting state
 # Global: deque of timestamps, max 5 messages per 5 seconds
@@ -40,6 +84,29 @@ intents.message_content = True  # Privileged intent - must be enabled in Discord
 
 # Initialize Discord client
 client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+
+@tree.command(name="sync", description="Link your Discord account to your Godfinger in-game account")
+async def sync_command(interaction: discord.Interaction):
+    discord_id = str(interaction.user.id)
+    
+    # Check if they already have a code
+    existing_code = None
+    for code, did in SYNC_CODES.items():
+        if did == discord_id:
+            existing_code = code
+            break
+            
+    if existing_code:
+        await interaction.response.send_message(f"Your sync code is `{existing_code}`. Please run `!sync {existing_code}` in-game to link your account.", ephemeral=True)
+        return
+        
+    # Generate new code
+    new_code = generate_sync_code()
+    SYNC_CODES[new_code] = discord_id
+    save_sync_codes()
+    
+    await interaction.response.send_message(f"Your new sync code is `{new_code}`. Please run `!sync {new_code}` in-game to link your account.", ephemeral=True)
 
 # Environmental variables
 DISCORD_BOT_TOKEN = None
@@ -64,7 +131,8 @@ class GhostYodaPlugin(object):
         self._commandList = {
             teams.TEAM_GLOBAL: {
                 tuple(["discord"]): ("!discord - Get the server's Discord link", self.HandleDiscordCommand),
-                tuple(["report"]): ("!report <target> <reason> - Report a player to the Discord admins", self.HandleReportCommand)
+                tuple(["report"]): ("!report <target> <reason> - Report a player to the Discord admins", self.HandleReportCommand),
+                tuple(["sync"]): ("!sync <code> - Link your Discord account", self.HandleSyncCommand)
             },
             teams.TEAM_EVIL: {},
             teams.TEAM_GOOD: {},
@@ -78,13 +146,52 @@ class GhostYodaPlugin(object):
             self._serverData.interface.SvSay(self._messagePrefix + "^7Discord link has not been configured yet.")
         return True
 
+    def HandleSyncCommand(self, player, args, messageRaw):
+        if len(args) < 2:
+            self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^7Usage: !sync <code>")
+            return True
+            
+        code = args[1]
+        
+        if code not in SYNC_CODES:
+            self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^1Invalid sync code.")
+            return True
+            
+        discord_id = SYNC_CODES[code]
+        
+        # Link account via AccountSystem exports
+        accountsystem_xprt = self._serverData.API.GetPlugin("plugins.shared.accountsystem.accountsystem")
+        if accountsystem_xprt is not None:
+            exports = accountsystem_xprt.GetExports()
+            if exports:
+                link_export = exports.Get("LinkDiscordAccount")
+                if link_export and hasattr(link_export, 'pointer'):
+                    success = link_export.pointer(player.GetId(), discord_id)
+                    
+                    # Consume the code regardless of linking success to prevent brute-force or reuse attempts
+                    del SYNC_CODES[code]
+                    save_sync_codes()
+
+                    if success:
+                        self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^2Successfully synced your account with Discord!")
+                    else:
+                        self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^1Failed to sync account (it may be already logged in).")
+                else:
+                    self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^1AccountSystem export missing.")
+            else:
+                self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^1AccountSystem exports not found.")
+        else:
+            self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + "^1AccountSystem not loaded.")
+            
+        return True
+
     def ProcessKillEvent(self, event):
         """Track teamkills for the !report command and broadcast to Discord."""
         
         # Construct the kill string and dump it to Discord if someone died
         log_kill_str = colors.StripColorCodes(event.data.get("text", ""))
         msg = f"⚔️ {log_kill_str}"
-        asyncio.run_coroutine_threadsafe(send_chat_log_to_discord(msg), client.loop)
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
         
         if not event.data.get("tk", False) or event.client is None or event.client == event.victim:
             return False
@@ -141,10 +248,7 @@ class GhostYodaPlugin(object):
             "recent_tks": recent_tks
         }
         
-        asyncio.run_coroutine_threadsafe(
-            send_report_to_discord(report_data),
-            client.loop
-        )
+        dispatch_discord_coro(send_report_to_discord(report_data))
         self._serverData.interface.SvTell(player.GetId(), self._messagePrefix + f"^7Report against ^1{matched_client.GetName()}^7 submitted successfully.")
         return True
 
@@ -154,10 +258,7 @@ class GhostYodaPlugin(object):
         if not data or not data.get("command"):
             return False
             
-        asyncio.run_coroutine_threadsafe(
-            send_admin_action_to_discord(data),
-            client.loop
-        )
+        dispatch_discord_coro(send_admin_action_to_discord(data))
         return False
 
     def ProcessSmodLogin(self, event):
@@ -169,10 +270,7 @@ class GhostYodaPlugin(object):
             "command": "LOGIN"
         }
         
-        asyncio.run_coroutine_threadsafe(
-            send_admin_action_to_discord(data),
-            client.loop
-        )
+        dispatch_discord_coro(send_admin_action_to_discord(data))
         return False
 
     def HandleBannedEntryAttempt(self, event):
@@ -181,39 +279,27 @@ class GhostYodaPlugin(object):
             "ip": event.ip
         }
         
-        asyncio.run_coroutine_threadsafe(
-            send_banned_entry_to_discord(data),
-            client.loop
-        )
+        dispatch_discord_coro(send_banned_entry_to_discord(data))
         return False
 
     def ProcessServerSay(self, event):
         """Forward server say broadcasts to Discord."""
         msg = f"🖥️ say: Server: {event.message}"
-        asyncio.run_coroutine_threadsafe(
-            send_chat_log_to_discord(msg),
-            client.loop
-        )
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
         return False
 
     def ProcessClientConnect(self, event):
         """Forward client connects to Discord."""
         cl = event.client
         msg = f"✅ ClientConnect: ({colors.StripColorCodes(cl.GetName())}) ID: {cl.GetId()} (IP: {cl.GetIp()})"
-        asyncio.run_coroutine_threadsafe(
-            send_chat_log_to_discord(msg),
-            client.loop
-        )
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
         return False
 
     def ProcessClientDisconnect(self, event):
         """Forward client disconnects to Discord."""
         cl = event.client
         msg = f"❌ ClientDisconnect: {cl.GetId()}"
-        asyncio.run_coroutine_threadsafe(
-            send_chat_log_to_discord(msg),
-            client.loop
-        )
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
         return False
 
     def ProcessMessage(self, event):
@@ -222,7 +308,7 @@ class GhostYodaPlugin(object):
         # Construct the chat log string and dump it to Discord
         cl = event.client
         msg = f"💬 {cl.GetId()}: say: {colors.StripColorCodes(cl.GetName())}: \"{colors.StripColorCodes(event.message)}\""
-        asyncio.run_coroutine_threadsafe(send_chat_log_to_discord(msg), client.loop)
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
         
         message_raw = colors.StripColorCodes(event.message).strip()
         player = event.client
@@ -272,32 +358,43 @@ async def start_discord_bot():
     await client.start(DISCORD_BOT_TOKEN)
 
 def start_discord_bot_thread():
+    global bot_loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    bot_loop = loop
     try:
         loop.run_until_complete(client.start(DISCORD_BOT_TOKEN))
     except Exception as e:
         Log.error(f"Error starting Ghost Yoda bot: {e}")
     finally:
-        loop.run_until_complete(client.close())
+        try:
+            loop.run_until_complete(client.close())
+        except Exception:
+            pass
         loop.stop()
         loop.close()
+        bot_loop = None
 
 def stop_bot_thread():
-    global bot_thread, log_watcher_task
+    global bot_thread, log_watcher_task, bot_loop
     if bot_thread and bot_thread.is_alive():
         shutdown_event.set()
-        if log_watcher_task:
-            future_cancel = asyncio.run_coroutine_threadsafe(log_watcher_task.cancel(), client.loop)
-            try:
-                future_cancel.result(timeout=1)
-            except asyncio.TimeoutError:
-                pass
-            log_watcher_task = None
+        if bot_loop and bot_loop.is_running():
+            if log_watcher_task:
+                future_cancel = asyncio.run_coroutine_threadsafe(log_watcher_task.cancel(), bot_loop)
+                try:
+                    future_cancel.result(timeout=1)
+                except asyncio.TimeoutError:
+                    pass
+                log_watcher_task = None
 
-        future = asyncio.run_coroutine_threadsafe(client.close(), client.loop)
+            future = asyncio.run_coroutine_threadsafe(client.close(), bot_loop)
+            try:
+                future.result(timeout=5)
+            except Exception:
+                pass
+        
         try:
-            future.result(timeout=5)
             bot_thread.join(timeout=5)
         except Exception:
             pass
@@ -314,6 +411,16 @@ async def on_ready():
     Log.info(f'Ghost Yoda logged in as {client.user}')
     global log_watcher_task
     log_watcher_task = asyncio.create_task(tail_bans_log())
+    
+    # Sync the slash commands with Discord
+    if DISCORD_GUILD_ID:
+        guild = discord.Object(id=int(DISCORD_GUILD_ID))
+        tree.copy_global_to(guild=guild)
+        try:
+            await tree.sync(guild=guild)
+            Log.info("Slash commands synced successfully!")
+        except Exception as e:
+            Log.error(f"Failed to sync slash commands: {e}")
 
 @client.event
 async def on_message(message):
@@ -512,6 +619,7 @@ def OnInitialize(serverData: serverdata.ServerData, exports=None) -> bool:
     global SERVER_DATA, PluginInstance
     SERVER_DATA = serverData
     load_env_variables()
+    load_sync_codes()
     PluginInstance = GhostYodaPlugin(serverData)
     
     # Register command help mapping

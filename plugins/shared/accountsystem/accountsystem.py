@@ -110,15 +110,26 @@ class AccountManager:
             last_login_ip TEXT,
             totp_secret TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP
+            last_login TIMESTAMP,
+            discord_id TEXT UNIQUE
         )
         """
         self.accounts_db.ExecuteQuery(create_user_credentials_table)
+        
+        try:
+            self.accounts_db.ExecuteQuery("ALTER TABLE user_credentials ADD COLUMN discord_id TEXT")
+        except Exception:
+            pass # Column may already exist
+            
+        try:
+            self.accounts_db.ExecuteQuery("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_credentials_discord_id ON user_credentials (discord_id)")
+        except Exception:
+            pass
 
     def get_account_by_user_id(self, user_id: int) -> Optional[Dict]:
         """Retrieve account data from database by user_id"""
         query = f"""
-        SELECT user_id, player_name, ip_address, last_login_ip, totp_secret, last_login
+        SELECT user_id, player_name, ip_address, last_login_ip, totp_secret, last_login, discord_id
         FROM user_credentials
         WHERE user_id = {user_id}
         """
@@ -131,10 +142,14 @@ class AccountManager:
             "ip_address": result[0][2],
             "last_login_ip": result[0][3],
             "totp_secret": result[0][4],
-            "last_login": result[0][5]
+            "last_login": result[0][5],
+            "discord_id": result[0][6]
         }
-        return Account(data["user_id"], None, data["player_name"],
+        acc = Account(data["user_id"], None, data["player_name"],
                        data["ip_address"], data["totp_secret"], client=None)
+        if data["discord_id"]:
+            acc.set_account_var("discord_id", data["discord_id"])
+        return acc
 
     def get_account_by_player_id(self, player_id: int) -> Optional[Account]:
         """Retrieve local account by player_id"""
@@ -144,7 +159,7 @@ class AccountManager:
     def load_account(self, player_name: str,
                      ip_address: str, client: Optional[Player] = None) -> Optional[Account]:
         esc_name = escape_sql_apostrophes(player_name)
-        query = f"SELECT user_id, player_name, ip_address, last_login_ip, totp_secret, last_login FROM user_credentials WHERE player_name = '{esc_name}' AND ip_address = '{ip_address}'"
+        query = f"SELECT user_id, player_name, ip_address, last_login_ip, totp_secret, last_login, discord_id FROM user_credentials WHERE player_name = '{esc_name}' AND ip_address = '{ip_address}'"
         result = self.accounts_db.ExecuteQuery(query, withResponse=True)
         if result and len(result) > 0:
             res = result[0]
@@ -154,11 +169,14 @@ class AccountManager:
             last_login_ip = res[3]
             totp_secret = res[4]
             last_login = res[5]
+            discord_id = res[6]
 
             # Create the Account object
             new_acc = Account(user_id, None, player_name, ip_address,
                               totp_secret, client=client)
             new_acc.last_login = last_login
+            if discord_id:
+                new_acc.set_account_var("discord_id", discord_id)
 
             # Update last_login and last_login_ip in the database
             update_query = f"""
@@ -265,6 +283,68 @@ class AccountPlugin:
                     self.account_manager.accounts[i].account_data[key] = None
                     break
         return None
+
+    def link_discord_account(self, client_id: int, discord_id: str) -> bool:
+        """Link a discord ID to an account, swapping the active session if necessary."""
+        client = self.server_data.API.GetClientById(client_id)
+        if not client:
+            return False
+            
+        ip_address = client.GetIp()
+        player_name = client.GetName()
+        esc_name = escape_sql_apostrophes(player_name)
+        
+        # 1. Check if discord_id is already linked to an account
+        query = f"SELECT user_id, player_name, ip_address, last_login_ip, totp_secret, last_login FROM user_credentials WHERE discord_id = '{discord_id}'"
+        result = self.account_manager.accounts_db.ExecuteQuery(query, withResponse=True)
+        
+        if result and len(result) > 0:
+            # Account exists for this discord_id
+            res = result[0]
+            user_id = res[0]
+            totp_secret = res[4]
+            last_login = res[5]
+            
+            # Prevent syncing if the account is already logged in on another client
+            for pid, acc in self.account_manager.accounts.items():
+                if acc.user_id == user_id and pid != client_id:
+                    self.server_data.interface.SvTell(client_id, self.msg_prefix + "^1This account is already logged in on another client.")
+                    return False
+            
+            # Update the existing account with the current IP and Name
+            update_query = f"""
+                UPDATE user_credentials
+                SET last_login = CURRENT_TIMESTAMP, last_login_ip = '{ip_address}', ip_address = '{ip_address}', player_name = '{esc_name}'
+                WHERE user_id = {user_id}
+            """
+            self.account_manager.accounts_db.ExecuteQuery(update_query)
+            
+            # Swap active session
+            if client_id in self.account_manager.accounts:
+                old_account = self.account_manager.accounts[client_id]
+                old_account.invalidate_session()
+                old_account.set_client(None)
+                
+            new_acc = Account(user_id, client_id, player_name, ip_address, totp_secret, client=client)
+            new_acc.last_login = last_login
+            new_acc.set_account_var("discord_id", discord_id)
+            self.account_manager.accounts[client_id] = new_acc
+            return True
+            
+        else:
+            # 2. No existing account for this discord_id. Link it to the current account.
+            if client_id not in self.account_manager.accounts:
+                return False
+                
+            current_account = self.account_manager.accounts[client_id]
+            if current_account.is_dummy_account():
+                return False # Cannot link dummy accounts
+                
+            user_id = current_account.user_id
+            update_query = f"UPDATE user_credentials SET discord_id = '{discord_id}' WHERE user_id = {user_id}"
+            self.account_manager.accounts_db.ExecuteQuery(update_query)
+            current_account.set_account_var("discord_id", discord_id)
+            return True
 
     def load_or_create_account(self, player_name: str, ip_address: str, client: Player, display_welcome=True) -> tuple[Account, bool, Optional[str]]:
         """
@@ -475,6 +555,7 @@ class AccountPlugin:
     def chat_say(self, message: str):
         self.server_data.interface.SvSay(f"{self.msg_prefix}{message}")
 
+account_plugin = None
 
 def OnStart() -> bool:
     global account_plugin
@@ -531,6 +612,7 @@ def OnInitialize(server_data: ServerData, exports=None):
         exports.Add("GetDatabaseConnection",
                     account_plugin.get_database_connection)
         exports.Add("GetAccountManager", account_plugin.get_account_manager)
+        exports.Add("LinkDiscordAccount", account_plugin.link_discord_account)
     return True
 
 
