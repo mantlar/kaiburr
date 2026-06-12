@@ -9,13 +9,27 @@ echo %python_version% | findstr /R "^3\.[1-9][2-9]" > nul
 if %errorlevel% neq 0 (
     echo Error: Python 3.12+ is required but not found.
     echo Please install Python 3.12 or higher and try again.
+    pause
     exit /b 1
 )
 
 echo Python version is acceptable (3.12.0 or newer)
 
+REM Kill any orphaned mbii.x86.exe processes if autoclient.cfg contains 1
+findstr /B /C:"1" ..\autoclient.cfg >nul 2>&1
+if %errorlevel%==0 (
+    echo Killing orphaned mbii.x86.exe processes...
+    start /wait powershell -WindowStyle Normal -Command "Stop-Process -Name 'mbii.x86' -Force -ErrorAction SilentlyContinue"
+)
+
+REM Navigate to bin for autostarting
+cd bin
+
+REM Check if MBIIDed.x86.exe is running, start it if not...
+python ./autostart_win.py
+
 REM Navigate to the project directory
-cd ../../
+cd ../../../
 
 REM Set the virtual environment path
 set "venvp=./venv/Scripts/activate.bat"
@@ -52,8 +66,8 @@ if exist "%venvp%" (
         pause
         exit /b
     )
-
     pause
+
 ) else (
     REM If the virtual environment doesn't exist
     echo Virtual environment does not exist or was created improperly, please run prepare.bat in root dir, aborting.

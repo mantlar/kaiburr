@@ -21,18 +21,19 @@ MyCoolVariablesTable : MyVariables = MyVariables();
 
 # Called once when this module ( plugin ) is loaded, return is bool to indicate success for the system
 def OnInitialize(serverData : serverdata.ServerData, exports = None) -> bool:
-    logMode = logging.INFO;
-    if serverData.args.debug:
-        logMode = logging.DEBUG;
-    if serverData.args.logfile != "":
-        logging.basicConfig(
-        filename=serverData.args.logfile,
-        level=logMode,
-        format='%(asctime)s %(levelname)08s %(name)s %(message)s')
-    else:
-        logging.basicConfig(
-        level=logMode,
-        format='%(asctime)s %(levelname)08s %(name)s %(message)s')
+    # Just an example how to configure the logger, otherwise it's using top-level configured logger.
+    # logMode = logging.INFO;
+    # if serverData.args.debug:
+    #     logMode = logging.DEBUG;
+    # if serverData.args.logfile != "":
+    #     logging.basicConfig(
+    #     filename=serverData.args.logfile,
+    #     level=logMode,
+    #     format='%(asctime)s %(levelname)08s %(name)s %(message)s')
+    # else:
+    #     logging.basicConfig(
+    #     level=logMode,
+    #     format='%(asctime)s %(levelname)08s %(name)s %(message)s')
 
     global SERVER_DATA;
     SERVER_DATA = serverData; # keep it stored
@@ -109,4 +110,10 @@ def OnEvent(event) -> bool:
     elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
         return False;
 
+
     return False;
+
+if __name__ == "__main__":
+    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    input("Press Enter to close this message.")
+    exit()

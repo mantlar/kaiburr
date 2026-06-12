@@ -43,8 +43,8 @@ class Rcon(object):
     while ( self._timeout.IsSet() ):
       pass;
 
-  def _Send(self, payload, buffer_size=1024, waitForResponse=True): # This method shouldn't be used outside the scope of this object's
-                                              # wrappers.
+  def _Send(self, payload, buffer_size=1024, waitForResponse=True): 
+    """ This method shouldn't be used outside the scope of this object's wrappers. """
     curTick = time.time();
     if curTick - self._lastCheckTick >= self._frameTime:
       self._counter = 0;
@@ -144,8 +144,36 @@ class Rcon(object):
       self.setVstr(vstrStorage, payload)
       self.execVstr(vstrStorage)
       
+  def smsay(self, msg):
+    """ Sends the given message in SMOD chat. Only logged in SMODs will be able to see this chat message. The sender will be 'RCON'. """
+    if not type(msg) == bytes:
+      msg = bytes(msg, "UTF-8")
+    return self._Send(b"\xff\xff\xff\xffrcon %b smsay %b" % (self.rcon_pwd, msg), waitForResponse=False)
+
+  def sound(self, path):
+    """ Plays a sound from the game's directory to the entire server. Players must have sv_serversounds set to '1' to be able to hear sounds from the server. """
+    if not type(path) == bytes:
+      path = bytes(path, "UTF-8")
+    return self._Send(b"\xff\xff\xff\xffrcon %b snd %b" % (self.rcon_pwd, path), waitForResponse=False)
+
+  def soundClient(self, path, client):
+    """ Plays a sound from the game's directory to the given client. The target player must have sv_serversounds set to '1' to be able to hear sounds from the server. """
+    if not type(path) == bytes:
+      path = bytes(path, "UTF-8")
+    if not type(client) == bytes:
+      client = bytes(client, "UTF-8")
+    return self._Send(b"\xff\xff\xff\xffrcon %b sndClient %b %b" % (self.rcon_pwd, client, path), waitForResponse=False)
+
+  def soundTeam(self, path, team):
+    """ Plays a sound from the game's directory to the given team ID (defined in `lib.shared.teams`). Players must have sv_serversounds set to '1' to be able to hear sounds from the server. """
+    if not type(path) == bytes:
+      path = bytes(path, "UTF-8")
+    if not type(team) == bytes:
+      team = bytes(team, "UTF-8")
+    return self._Send(b"\xff\xff\xff\xffrcon %b sndTeam %b %b" % (self.rcon_pwd, team, path), waitForResponse=False)
 
   def svtell(self, client, msg):
+    """ Sends the given message to the client with the given ID. """
     if not type(msg) == bytes:
       msg = bytes(msg, "UTF-8")
     if not type(client) == bytes:
@@ -158,7 +186,11 @@ class Rcon(object):
 
   def clientkick(self, player_id):
     return self._Send(b"\xff\xff\xff\xffrcon %b clientkick %i" % (self.rcon_pwd, player_id))
-  
+
+  def tempban(self, player_name, rounds):
+    name = bytes(player_name, "UTF-8")
+    return self._Send(b"\xff\xff\xff\xffrcon %b tempban \"%b\" %i" % (self.rcon_pwd, name, rounds))
+
   # untested
   def clientban(self, player_ip):
     return self._Send(b"\xff\xff\xff\xffrcon %b addip %s" % (self.rcon_pwd, player_ip))
@@ -217,7 +249,7 @@ class Rcon(object):
       response = response.decode("UTF-8", "ignore")
       if response == "":
         repeats -= 1;
-        sleep(0.1);
+        sleep(0.75);
         continue;
       response = response.removeprefix("print\n\"g_siegeTeam1\" is:")
       response = response.split('"')[1][:-2].strip();
@@ -231,7 +263,7 @@ class Rcon(object):
       response = response.decode("UTF-8", "ignore")
       if response == "":
         repeats -= 1;
-        sleep(0.1);
+        sleep(0.75);
         continue;
       response = response.removeprefix("print\n\"g_siegeTeam2\" is:")
       response = response.split('"')[1][:-2].strip();

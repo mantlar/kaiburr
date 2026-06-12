@@ -4,6 +4,10 @@
 
 ㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ![GC logo](https://github.com/MBII-Galactic-Conquest/godfinger/blob/main/gc.png)
 
+ㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ![Windows Terminal](https://img.shields.io/badge/Windows%20Terminal-%234D4D4D.svg?style=for-the-badge&logo=windows-terminal&logoColor=white)	 		![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)	 		![Bash Script](https://img.shields.io/badge/bash_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)</br>
+ㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ		 				 				 				 				 				 			ㅤㅤㅤ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)	 				 				 			![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)	 		![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+
+
 </br>
 
 #### A modular script extension system that allows streamlined rcon &amp; plugin interaction to simplify serverside processing for MBII in python. Aimed to better equip server owners to improve their own creative works, and have more expression over their game servers.
@@ -26,6 +30,7 @@ The possibilities of this system allow for myriad of custom logfile implements, 
 - account systems,
 - sql databases,
 - AI responses,
+- automated asset building,
 - integrating other languages,
 - discord integration, & more.
 ```
@@ -36,10 +41,25 @@ The possibilities of this system allow for myriad of custom logfile implements, 
 
 > [!IMPORTANT]
 > [`** REQUIRES PYTHON 3.12.7+ **`](https://www.python.org/downloads/release/python-3127/)
-> 
+>
+> Ensure godfinger folder is installed in `Jedi Academy/GameData/.`
+>
 > Ensure your logfile is set to `server.log` in your `server.cfg.`
 > 
-> Ensure `g_logExplicit` is `"3"`, `g_logSync` is `"1"`, `com_logChat` is `"2"`, and `g_logClientInfo` is `"1"` in your `server.cfg.`
+> Ensure the following cvars are set in your `server.cfg.`
+> 
+> - `g_logExplicit` is `"3"`
+> - `g_logSync` is `"1"`
+> - `com_logChat` is `"2"`
+> - `g_logClientInfo` is `"1"`
+> - `g_statLog` is `"1"`
+> - `g_statLogFile` is `statlog.log`
+> - `sv_maxOOBRateIP` should be at least `3` to prevent rcon rate limiting. If rate limiting persists, increase this value.
+
+set com_logfile "2"
+set com_logSync "1"
+set logfile	"2"
+
 > 
 > Execute `"prepare"` script based on platform in  `./prepare/os` to install dependancy modules, run the `"start"` or `"startDebug"` script based on platform in `./start/os`, then sufficiently fill out the generated `godfingerCfg.json` in root directory.
 >
@@ -74,6 +94,12 @@ The possibilities of this system allow for myriad of custom logfile implements, 
 > 
 > > So i.e, if you send 6 rcons within 20 miliseconds frame time, it will send 5 and then wait for 20 milliseconds and send the 6th rcon afterwards.
 >
+> 
+> </br>
+>
+> #3) If you don't have GIT natively installed when running the update process as a windows user, and it errors on portable install, `7z_portable.zip` is stored using Git LFS. You must [`download`](https://github.com/MBII-Galactic-Conquest/godfinger/blob/main/lib/other/win/7z_portable.zip) and place it in `./lib/other/win`, then run the update process again, or reference [`release`](https://github.com/MBII-Galactic-Conquest/godfinger/releases/) versions with 7Z portable file manager included natively.</br>
+> > Alternatively, and for `UNIX` users, ensure [`GIT is installed`](https://git-scm.com/downloads/) before using the godfinger platform as a necessary precaution.
+>
 
 </br>
 
@@ -94,17 +120,43 @@ The possibilities of this system allow for myriad of custom logfile implements, 
 >         - "port" : The port to connect to. In most cases, should be 29070.
 >     - "bindAddress" : The address for the script to use as a bind address. In most cases should be the same as the IP.
 >     - "password" : The server's rcon password. Set in server.cfg.
+>
 > - "MBIIPath" : File path to the MBII installation to be used.
 > - "logFilename" : Name of the server log file (defined in server.cfg, default is server.log)
 > - "serverFileName" : Name of the server executable file to use.
 > - "logicDelay" : Interval of time to pass between script heartbeat loops.
 > - "logReadDelay" : Interval of time to pass between retrieval of new log lines to parse.
 > - "paths" : A list of string paths to append to system path, used to pass import directories for dependancies of plugins and such.
-> - "prologueMessage" : A string to post in svsay when the platform is up.
-> - "epilogueMessage" : A string to post in svsay when the platform is finishing.
 > - "restartOnCrash" : If this is set to true, the server will attempt to restart itself if a fatal exception is detected.
-> - "Plugins": A list of plugin names, defined as python package strings (https://docs.python.org/3/tutorial/modules.html#packages), to use with the engine.
-> - "Debug": TestRetrospect true|false allows for simulating and recreating active game data for the purpose of test case bugfixing. False is generally considered default.
+> - "watchdog" : Process monitoring and auto-restart configuration for the MB2 dedicated server. The RconInterface already monitors the MB2 server process automatically - this setting enables automatic restart when the process dies.
+>    - "enabled" : If true, enables automatic restart when the MB2 server process dies. The process monitoring is always active in RconInterface.
+>    - "restartServer" : If true, attempts to restart the MB2 server when it crashes.
+>    - "serverStartCommand" : Path to the script/executable to start the MB2 server. If left empty (""), Godfinger will automatically set this to the platform-specific autostart scripts by OS.
+>
+> - "interfaces"
+>    - "pty" : Pseudo-terminal utilities (https://docs.python.org/3/library/pty.html), used to wrap the mbiided process.
+>        - "target" : File path to the MBII dedicated server executable.
+>         - "inputDelay" : Interval of time to pass between terminal heartbeat loops.
+>    - "rcon" : The typical use of the godfinger script extension system, generic logfile parsing.
+>     - "Remote"
+>         - "address"
+>            - "ip" : The IP address of the server to connect to. In most cases this should be localhost as the script requires access to the log file to function.
+>            - "port" : The port to connect to. In most cases, should be 29070.
+>       - "bindAddress" : The address for the script to use as a bind address. In most cases should be the same as the IP.
+>       - "password" : The server's rcon password. Set in server.cfg.
+>      - "logFilename" : Name of the server log file (defined in server.cfg, default is server.log)
+>      - "logReadDelay" : Interval of time to pass between retrieval of new log lines to parse.
+>     - "Debug"
+>       - "TestRetrospect" : true/false allows for simulating and recreating active game data for the purpose of test case bugfixing. False is generally considered default.
+>
+> - "interface" : Where you can specify which interface you wish to use, in this case, "rcon" or "pty", with "rcon" as default.
+>
+> - "paths" : Where you can specify foreign directories not native to the godfinger root working directory, in the event of private codebases, or other implements with the godfinger system. Default is ".\\"
+>
+> - "prologueMessage" : String to show when the godfinger system has acknowledged sufficiently starting up, and deployed natively without error.
+> - "epilogueMessage" : String to show when the godfinger system concludes, and has exited cleanly, safely.
+>
+> - "Plugins" : A list of plugin names, defined as python package strings (https://docs.python.org/3/tutorial/modules.html#packages), to use with the engine.
 > ```
 
 </br>
@@ -151,5 +203,110 @@ The possibilities of this system allow for myriad of custom logfile implements, 
 >        ".\\",
 >        "<path>\\<to>\\<update>\\<deploy>\\<folder>\\"
 >    ],
+> ```
+>
+
+</br>
+
+</br>
+
+> [!IMPORTANT]
+> ### **Using WinSCP Script Hooks**
+>
+> The godfinger system supports portable WinSCP script hook installation.
+> 
+> > You may sync your `gamedata/` directory on the `local` by pulling latest from the `REMOTE.`</br>Ensuring your latest .PK3 asset changes are synced to your game servers via `FTP.`</br></br>Running `installwinSCP_portable.bat` will install and generate a template `winscp_sync_gamedata.bat` file inside of your virtual environment, in `/venv/portable_winSCP.`
+>
+> You will have to modify the generated `winscp_sync_gamedata.bat` with the following:
+>
+> ```
+>
+> $ = your partition (e.g: D drive)
+>
+> SET "FTP_HOST=your_ftp_host.com"
+> SET "FTP_USER=your_ftp_username"
+> SET "FTP_PASS=your_ftp_password"
+> SET "REMOTE_FTP_PATH=/path/on/ftp/server/to/files" # Usually, $:/FTP/ being $:/FTP/Gamedata
+> # Do not touch local target path.
+>
+> ```
+>
+> **Using the [gittracker](https://github.com/MBII-Galactic-Conquest/godfinger/tree/main/plugins/shared/gittracker) plugin, read documentation, and set `isWinSCPBuilding` to `true`**
+
+</br>
+
+</br>
+
+> [!IMPORTANT]
+> ### **Utilizing Docker Containers**
+>
+> > Ensure you have [docker](https://docs.docker.com/get-started/get-docker/) installed before continuing</br>
+> > `sudo apt install -y docker.io && pip install docker`
+>
+> You may utilize docker containers to isolate godfinger sessions on UNIX.<br>
+> The godfinger system does not support local instancing, so docker is encouraged.
+>
+> ```
+> 1) Installing Manually:
+>
+> Ensure you are in the godfinger RWD, one level above the docker/ folder...
+>
+> docker build -f docker/Dockerfile -t godfinger .
+>
+> docker run --rm -it \
+> -v $(pwd)/../dockerize:/app/jediacademy \
+> -v $(pwd):/app/jediacademy/gamedata/godfinger \
+> -v $(pwd)/../configstore_godfinger:/app/jediacademy/gamedata/godfinger \
+> -p 29070:29070/udp \
+> -p 29070:29070/tcp \
+> godfinger
+>
+> 2) Automated Local Install:
+>
+> chmod +x docker/build-image.sh
+> cd docker/
+> ./build-image.sh
+>
+> 3) Pterodactyl Egg:
+>
+> Access the Pterodactyl Panel as Admin,
+> Admin Panel → Nests,
+> Create a New Nest,
+> Eggs → Create Egg,
+> Import docker/godfinger-egg.json,
+> Select Godfinger Egg and apply your Docker Image...
+>
+> ```
+>
+> <br>
+>
+> Ensure `Jedi Academy` & `Moviebattles II` is installed in a parent subdirectory called `dockerize/`<br>Recursive access to necessary linux server binaries is required for godfinger to run in automated containerized environments.<br>
+>
+> ```
+> dockerize/
+> └── gamedata/
+> :   └── MBII/
+> :
+> godfinger/
+> └── $(RWD/)
+> ```
+>
+> <br>
+>
+> You will have to create your own `volumes`, or `svn post hooks` to serve as configstores for automation purposes.<br>Godfinger will still encounter exceptions requiring `config files` & `environment variables` to run without first time error.
+>
+> Ensure your configstore is placed in a parent subdirectory, called `configstore_godfinger/` mirroring pathing for the project.
+>
+> ```
+> configstore_godfinger/
+> ├── godfingerCFG.json
+> └── plugins/
+> :    ├── shared/
+> :    └── myplugin/
+> :        ├── pluginCFG.json
+> :        └── envfile.env
+> :
+> godfinger/
+> └── $(RWD/)
 > ```
 >

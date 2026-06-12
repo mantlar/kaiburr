@@ -8,6 +8,7 @@ import os;
 import database;
 import lib.shared.client as client;
 import requests;
+import ipaddress;
 
 SERVER_DATA = None;
 
@@ -37,8 +38,9 @@ CONFIG_FALLBACK = \
     ],
     "blacklist":
     [
-
-    ]
+    
+    ],
+    "svsayOnAction" : true
 }
 """
 global VPNMonitorConfig;
@@ -56,6 +58,7 @@ class VPNMonitor():
         self._status = 0;
         self._serverData = serverData;
         self.config = VPNMonitorConfig;
+        self._messagePrefix = "^9[VPN]^7: "
         if self.config.cfg["apikey"] == "your_api_key":
             self._status -1;
             Log.error("Please specify valid api key in vpnmonitorCfg.json");
@@ -76,22 +79,10 @@ class VPNMonitor():
             self._status = -1;
 
     def Start(self) -> bool:
-        status = self._serverData.rcon.status();
-        if status != None:
-            statusStr = status.decode("UTF-8", "ignore");
-            Log.debug(statusStr);
-            splitted = statusStr.splitlines();
-            l = len( splitted );
-            if l > 10:
-                for i in range (10, l):
-                    line = splitted[i];
-                    playerSplit = line.split();
-                    if len(playerSplit) >= 6: # hardcode
-                        addr = playerSplit[-2];
-                        ip = addr[:addr.rfind(":")];
-                        id = int(playerSplit[0]);
-                        vpnType = self.GetIpVpnType(ip);
-                        self.ProcessVpnClient(id, ip, vpnType);
+        allClients = self._serverData.API.GetAllClients();
+        for cl in allClients:
+            vpnType = self.GetIpVpnType(cl.GetIp());
+            self.ProcessVpnClient(cl, vpnType);
         if self._status == 0:
             return True;
         else:
@@ -104,7 +95,7 @@ class VPNMonitor():
         vpnType = self.GetClientVPNType(client);
         if vpnType < 0:
             return False;
-        self.ProcessVpnClient(client.GetId(), client.GetIp(), vpnType);
+        self.ProcessVpnClient(client, vpnType);
         return False;
         
     
@@ -112,11 +103,24 @@ class VPNMonitor():
         ip = client.GetIp();
         return self.GetIpVpnType(ip);
         
+    def _IsIpMatch(self, ip: str, item) -> bool:
+        try:
+            target_ip = ipaddress.ip_address(ip)
+            if isinstance(item, str):
+                return target_ip == ipaddress.ip_address(item)
+            elif isinstance(item, list) and len(item) == 2:
+                start_ip = ipaddress.ip_address(item[0])
+                end_ip = ipaddress.ip_address(item[1])
+                return start_ip <= target_ip <= end_ip
+        except Exception as e:
+            Log.error(f"Error checking IP {ip} against {item}: {e}")
+        return False
 
     def GetIpVpnType(self, ip : str ) -> int:
         whitelist = self.config.cfg["whitelist"];
-        if ip in whitelist:
-            if not self._serverData.args.debug:
+        for entry in whitelist:
+            if self._IsIpMatch(ip, entry):
+                Log.debug("IP %s matches whitelist entry %s, skipping VPN check.", ip, str(entry));
                 return -1;
     
         Log.debug("Getting vpn associated with ip address %s", ip);
@@ -140,24 +144,33 @@ class VPNMonitor():
         
         return vpnType;
 
-    def ProcessVpnClient(self, id, ip, vpnType):
+    def ProcessVpnClient(self, client : client.Client, vpnType : int):
+        ip = client.GetIp()
+        id = client.GetId()
         blockable = self.config.GetValue("block", []);
         if vpnType in blockable:
             Log.debug("Kicking a player with ip %s due to VPN block rules" % ip);
             if self.config.GetValue("action", 0) == 1:
                 Log.debug("Banning ip %s" % ip)
-                self._serverData.rcon.clientban(ip);
-            self._serverData.rcon.clientkick(id);
+                self._serverData.interface.ClientBan(ip);
+            self._serverData.interface.ClientKick(id);
+            if self.config.cfg["svsayOnAction"] == True:
+                self._serverData.interface.SvSay(self._messagePrefix + f"Kicked player {client.GetName()}^7 for suspected VPN usage.")
             return;
         
         blacklist = self.config.cfg["blacklist"];
-        if ip in blacklist:
-            Log.debug("Kicking a player with ip %s due to VPN blacklist rules" % ip);
-            if self.config.GetValue("action", 0) == 1:
-                Log.debug("Banning ip %s" % ip)
-                self._serverData.rcon.clientban(ip);
-            self._serverData.rcon.clientkick(id);
-            return;
+        for entry in blacklist:
+            if self._IsIpMatch(ip, entry):
+                Log.debug("Kicking a player with ip %s due to VPN blacklist match: %s", ip, str(entry));
+                if self.config.GetValue("action", 0) == 1:
+                    Log.debug("Banning ip %s" % ip)
+                    self._serverData.interface.ClientBan(ip);
+                elif self.config.GetValue("action", 0) == 0:
+                    Log.debug("Kicking ip %s" % ip)
+                    self._serverData.interface.ClientKick(id);
+                if self.config.cfg["svsayOnAction"] == True:
+                    self._serverData.interface.SvSay(self._messagePrefix + f"Kicked player {client.GetName()}^7 for suspected VPN usage.")
+                return;
 
     def OnClientDisconnect(self, client : client.Client, reason, data ) -> bool:
         return False;
@@ -165,19 +178,6 @@ class VPNMonitor():
 
 # Called once when this module ( plugin ) is loaded, return is bool to indicate success for the system
 def OnInitialize(serverData : serverdata.ServerData, exports = None) -> bool:
-    logMode = logging.INFO;
-    if serverData.args.debug:
-        logMode = logging.DEBUG;
-    if serverData.args.logfile != "":
-        logging.basicConfig(
-        filename=serverData.args.logfile,
-        level=logMode,
-        format='%(asctime)s %(levelname)08s %(name)s %(message)s')
-    else:
-        logging.basicConfig(
-        level=logMode,
-        format='%(asctime)s %(levelname)08s %(name)s %(message)s')
-
     global SERVER_DATA;
     SERVER_DATA = serverData; # keep it stored
     global PluginInstance;
@@ -189,7 +189,15 @@ def OnInitialize(serverData : serverdata.ServerData, exports = None) -> bool:
 # Called once when platform starts, after platform is done with loading internal data and preparing
 def OnStart():
     global PluginInstance;
-    return PluginInstance.Start();
+    from time import time
+    startTime = time()
+    result = PluginInstance.Start()
+    if result:
+        loadTime = time() - startTime
+        PluginInstance._serverData.interface.SvSay(
+            PluginInstance._messagePrefix + f"VPN Monitor started in {loadTime:.2f} seconds!"
+        )
+    return result
 
 # Called each loop tick from the system, TODO? maybe add a return timeout for next call
 def OnLoop():
@@ -239,5 +247,9 @@ def OnEvent(event) -> bool:
         return False;
     elif event.type == godfingerEvent.GODFINGER_EVENT_TYPE_PLAYER_SPAWN:
         return False;
-
     return False;
+
+if __name__ == "__main__":
+    print("This is a plugin for the Godfinger Movie Battles II plugin system. Please run one of the start scripts in the start directory to use it. Make sure that this python module's path is included in godfingerCfg!")
+    input("Press Enter to close this message.")
+    exit()

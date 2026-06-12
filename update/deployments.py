@@ -3,6 +3,7 @@ import subprocess
 import shutil
 from dotenv import load_dotenv
 import stat
+import sys
 
 # Define file paths
 ENV_FILE = "deployments.env"
@@ -20,22 +21,22 @@ if os.name == 'nt':  # Windows
     else:
         GIT_EXECUTABLE = os.path.abspath(GIT_PATH)
 
-    PYTHON_CMD = "python"  # On Windows, just use 'python'
+    PYTHON_CMD = sys.executable
 
     # Set the environment variables for Windows if Git was found
     if GIT_EXECUTABLE:
         os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = GIT_EXECUTABLE
-        print(f"Git executable set to: {GIT_EXECUTABLE}")
+        #print(f"Git executable set to: {GIT_EXECUTABLE}")
     else:
         print("Git executable could not be set. Ensure Git is installed.")
 else:  # Non-Windows (Linux, macOS)
     # Get the default Git executable path
     GIT_EXECUTABLE = shutil.which("git")
-    PYTHON_CMD = "python3" if shutil.which("python3") else "python"
+    PYTHON_CMD = sys.executable
 
     if GIT_EXECUTABLE:
         os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = GIT_EXECUTABLE
-        print(f"Git executable set to default path: {GIT_EXECUTABLE}")
+        #print(f"Git executable set to default path: {GIT_EXECUTABLE}")
     else:
         print("Git executable not found on the system.")
 
@@ -69,8 +70,7 @@ with open(ENV_FILE, "r") as f:
 
 # If no valid deployments found, print message and exit
 if not deployments:
-    print("No deployments to manage. Press enter to continue...")
-    input()
+    print("No deployments to manage.")
     exit(0)
 
 # Process deployments
@@ -132,13 +132,31 @@ for repo_branch, deploy_key in deployments.items():
             print(f"Error updating {repo_branch}: {e}")
             continue
 
-    # Get latest commit hash
+    # Ask for commit hash (optional)
+    commit_hash = input(f"\nEnter specific commit hash for {repo_branch} (or press Enter to deploy latest HEAD): ").strip()
+    
+    # If the user doesn't provide a commit hash, get the latest HEAD
+    if not commit_hash:
+        try:
+            result = subprocess.run([GIT_EXECUTABLE, "rev-parse", "HEAD"], cwd=repo_dir, capture_output=True, text=True, check=True)
+            commit_hash = result.stdout.strip()
+            print(f"Using latest HEAD: {commit_hash}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting latest commit hash for {repo_branch}: {e}")
+            continue
+
+    # Checkout specific commit if provided
     try:
-        result = subprocess.run([GIT_EXECUTABLE, "rev-parse", "HEAD"], cwd=repo_dir, capture_output=True, text=True, check=True)
-        latest_commits[repo_branch] = result.stdout.strip()
-        print(f"Updated {repo_branch} -> {repo_dir}")
+        # Disable detached HEAD advice
+        subprocess.run([GIT_EXECUTABLE, "config", "--local", "advice.detachedHead", "false"], cwd=repo_dir, check=True)
+        subprocess.run([GIT_EXECUTABLE, "checkout", commit_hash], cwd=repo_dir, check=True, env=git_env)
+        print(f"Checked out commit {commit_hash} for {repo_branch}")
+        latest_commits[repo_branch] = commit_hash
     except subprocess.CalledProcessError as e:
-        print(f"Error getting latest commit hash for {repo_branch}: {e}")
+        print(f"Error checking out commit {commit_hash} for {repo_branch}: {e}")
+        continue
+
+    print(f"Deployed {repo_branch} -> {repo_dir}")
 
 print("Deployment process completed.")
-input("Press Enter to exit...")
+input("Press Enter to continue...")

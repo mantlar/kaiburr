@@ -1,8 +1,6 @@
 import re
 
 
-
-
 # default aka white, is 7
 COLOR_CODES = \
 {
@@ -28,12 +26,14 @@ COLOR_CODES = \
     "black":"^0"
 };
 
+
 # returns a copy of text string with added color wrappings
 def ColorizeText(text, colorName, originalColorCode = "default"):
+    text = str(text)
     return "" + COLOR_CODES[colorName] + text + COLOR_CODES[originalColorCode];
 
 def HighlightSubstr(text, startIndex, endIndex, colorCode, originalColorCode="default"):
     return text[:startIndex] + COLOR_CODES[colorCode] + text[startIndex:endIndex] + COLOR_CODES[originalColorCode] + text[endIndex:]
 
-def stripColorCodes(text) -> str:
-    return re.sub("(\\^\\d)", '', text)
+def StripColorCodes(text) -> str:
+    return re.sub(r"(\^\d)", '', text)

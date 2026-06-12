@@ -13,9 +13,26 @@ call ../../venv/Scripts/activate.bat
 echo Using python at :
 where python
 
+:: Check for latest pip
+python -m pip install --upgrade pip
+if %errorlevel% neq 0 (
+    echo Error checking for pip update. Press Enter to exit.
+    pause
+    exit /b
+)
+
 :: Install dependencies
 echo Installing dependencies...
 python -m pip install -U -r requirements.txt
+if %errorlevel% neq 0 (
+    echo Error installing dependencies. Press Enter to exit.
+    pause
+    exit /b
+)
+
+:: Install Windows-specific dependencies
+echo Installing windows-specific dependencies...
+python -m pip install -U -r win_requirements.txt
 if %errorlevel% neq 0 (
     echo Error installing dependencies. Press Enter to exit.
     pause
@@ -27,6 +44,24 @@ echo Running ANSI-WIN1252 file-read-backwards patch...
 START /WAIT python ./prepare.py
 if %errorlevel% neq 0 (
     echo Error running prepare.py. Press Enter to exit.
+    pause
+    exit /b
+)
+
+:: Check if MSVC.x86 is installed
+echo Verifying MSVC.x86 installation for MBII dedicated binaries...
+START /WAIT python ./msvc_win.py
+if %errorlevel% neq 0 (
+    echo Error running msvc_win.py. Press Enter to exit.
+    pause
+    exit /b
+)
+
+:: Run the noinput obscuring script
+echo Obscuring update and deployments noinput files, as they are not intended to be used...
+call ./obscure_win.bat
+if %errorlevel% neq 0 (
+    echo Error running obscure_win.bat. Press Enter to exit.
     pause
     exit /b
 )

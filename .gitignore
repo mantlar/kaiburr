@@ -3,8 +3,14 @@ lib/private/*
 plugins/private/*
 !plugins/private/.keep
 
+tmp/*
+temp/*
+temporary/*
+
 update/deploy/*
+!update/deploy/.keep
 update/key/*
+!update/key/.keep
 
 *.code-workspace
 
@@ -15,12 +21,32 @@ update/key/*
 __pycache__/*
 *.log
 
+!docker/godfinger-egg.json
+!start/autostart.cfg
+!start/autoclient.cfg
+!data/extralives.json
+
 godfingerCfg.json
 automessageCfg.json
 vpnmonitorCfg.json
 automodCfg.json
+gtConfig.json
 
 *.db
 *.DB
-ignored/
-venv/
+ignored/*
+venv/*
+
+# Plugin-specific files containing IPs
+plugins/shared/votekick/protectedIPs.txt
+plugins/shared/votekick/protectedIPs.ini
+plugins/shared/votekick/protectedIPs.cfg
+plugins/shared/votemute/protectedIPs.txt
+plugins/shared/votemute/protectedIPs.ini
+plugins/shared/votemute/protectedIPs.cfg
+
+/logs/*
+aishit.md
+test_unicode_name.py
+test.py
+*.zip
