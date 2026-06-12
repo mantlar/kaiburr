@@ -45,10 +45,10 @@ class IServerInterface():
     def IsOpened(self) -> bool:
         return False
 
-    def SvSay(self, text : str) -> str:
+    def SvSay(self, text : str, tryAgain: bool = False) -> str:
         return "Not implemented"
 
-    def Say(self, text : str) -> str:
+    def Say(self, text : str, tryAgain: bool = False) -> str:
         return "Not implemented"
 
     def SvTell(self, pid : int, text : str) -> str:
@@ -132,7 +132,7 @@ class IServerInterface():
     def ClientSound(self, soundName : str, clientId : int) -> str:
         return
 
-    def SmSay(self, msg : str) -> str:
+    def SmSay(self, msg : str, tryAgain: bool = False) -> str:
         return
 
     def Test(self):
@@ -144,10 +144,10 @@ class IServerInterface():
 
     # !!! CUSTOM SERVER BUILD COMMANDS !!!
     # THESE WILL NOT WORK WITH STANDARD OPENJK SERVER BUILD
-    def SvPrint(self, msg : str, target = "all") -> str:
+    def SvPrint(self, msg : str, target = "all", tryAgain: bool = False) -> str:
         return
 
-    def SvPrintCon(self, msg : str, target = "all") -> str:
+    def SvPrintCon(self, msg : str, target = "all", tryAgain: bool = False) -> str:
         return
 
     def SvCenterPrint(self, msg : str, len : int = 1) -> str:
@@ -253,14 +253,14 @@ class RconInterface(AServerInterface):
             with self._queueLock:
                 self._workingMessageQueue.put(logMessage.LogMessage("wd_restarted"))
     
-    def SvSay(self, text : str) -> str:
+    def SvSay(self, text : str, tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.SvSay(text)
+            return self._rcon.SvSay(text, tryAgain=tryAgain)
         return None
 
-    def Say(self, text : str) -> str:
+    def Say(self, text : str, tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.Say(text)
+            return self._rcon.Say(text, tryAgain=tryAgain)
         return None
 
     def SvTell(self, pid : int, text : str) -> str:
@@ -391,9 +391,9 @@ class RconInterface(AServerInterface):
             return self._rcon.ClientSound(soundName, clientId)
         return None
 
-    def SmSay(self, msg : str) -> str:
+    def SmSay(self, msg : str, tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.SmSay(msg)
+            return self._rcon.SmSay(msg, tryAgain=tryAgain)
         return None
 
     def ExecFile(self, filename : str) -> str:
@@ -409,14 +409,14 @@ class RconInterface(AServerInterface):
 
     # !!! CUSTOM SERVER BUILD COMMANDS !!!
     # THESE WILL NOT WORK WITH STANDARD OPENJK SERVER BUILD
-    def SvPrint(self, msg : str, target : str = "all") -> str:
+    def SvPrint(self, msg : str, target : str = "all", tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.SvPrint(msg, target)
+            return self._rcon.SvPrint(msg, target, tryAgain=tryAgain)
         return None
 
-    def SvPrintCon(self, msg : str, target : str = "all") -> str:
+    def SvPrintCon(self, msg : str, target : str = "all", tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.SvPrintCon(msg, target)
+            return self._rcon.SvPrintCon(msg, target, tryAgain=tryAgain)
         return None
 
     def SvCenterPrint(self, msg : str, len : int = 1) -> str:
@@ -454,7 +454,7 @@ class RconInterface(AServerInterface):
                                         line = line[7:]
                                         self._workingMessageQueue.put(logMessage.LogMessage(line))
                                     else:
-                                        if line.startswith("SV packet ") or line.startswith("Game rejected "):
+                                        if line.startswith("SV packet ") or line.startswith("Game rejected ") or line.startswith("RoundWinner:"):
                                             self._workingMessageQueue.put(logMessage.LogMessage(line))
                     if (len(linesSplit) == 1 and linesSplit[0] == ""):
                         time.sleep(sleepTime)
@@ -819,8 +819,9 @@ class PtyInterface(AServerInterface):
             result.append(text)
         return result
 
-    def SvSay(self, text : str) -> str:
+    def SvSay(self, text : str, tryAgain: bool = False) -> str:
         if self.IsOpened():
+            text = remoteconsole.sanitize_str(text)
             strs = self._TruncateString(text)
             result = ""
             for i in range(len(strs)):
@@ -830,8 +831,9 @@ class PtyInterface(AServerInterface):
             return result
         return None
 
-    def Say(self, text : str) -> str:
+    def Say(self, text : str, tryAgain: bool = False) -> str:
         if self.IsOpened():
+            text = remoteconsole.sanitize_str(text)
             strs = self._TruncateString(text)
             result = ""
             for i in range(len(strs)):
@@ -843,6 +845,7 @@ class PtyInterface(AServerInterface):
 
     def SvTell(self, text : str, pid : int) -> str:
         if self.IsOpened():
+            text = remoteconsole.sanitize_str(text)
             strs = self._TruncateString(text)
             result = ""
             for i in range(len(strs)):
@@ -854,6 +857,7 @@ class PtyInterface(AServerInterface):
 
     def TeamSay(self, players, team, vstrStorage, msg):
         if self.IsOpened():
+            msg = remoteconsole.sanitize_str(msg)
             toExecute = []
             for p in players:
                 if p.GetTeamId() == team:
@@ -904,6 +908,7 @@ class PtyInterface(AServerInterface):
     
     def ClientBan(self, pip : str) -> str:
         if self.IsOpened():
+            pip = remoteconsole.sanitize_str(pip)
             cmdStr = "addip %s" % (pip)
             proc = PtyInterface.EchoProcessor(cmdStr)
             return self.ExecuteCommand(cmdStr, proc)
@@ -911,6 +916,7 @@ class PtyInterface(AServerInterface):
     
     def ClientUnban(self, pip : str) -> str:
         if self.IsOpened():
+            pip = remoteconsole.sanitize_str(pip)
             cmdStr = "removeip %s" % (pip)
             proc = PtyInterface.EchoProcessor(cmdStr)
             return self.ExecuteCommand(cmdStr, proc)
@@ -925,6 +931,7 @@ class PtyInterface(AServerInterface):
 
     def Tempban(self, name : str, rounds : int) -> str:
         if self.IsOpened():
+            name = remoteconsole.sanitize_str(name)
             cmdStr = "tempban \"%s\" %i" % (name, rounds)
             proc = PtyInterface.EchoProcessor(cmdStr)
             return self.ExecuteCommand(cmdStr, proc)
@@ -932,6 +939,8 @@ class PtyInterface(AServerInterface):
 
     def SetCvar(self, cvarName : str, value : str) -> str:
         if self.IsOpened():
+            cvarName = remoteconsole.sanitize_str(cvarName)
+            value = remoteconsole.sanitize_str(value, keep_semicolons=True)
             cmdStr = "%s %s" % (cvarName, value)
             proc = PtyInterface.SetCvarProcessor(cmdStr)
             return self.ExecuteCommand(cmdStr, proc)
@@ -976,6 +985,7 @@ class PtyInterface(AServerInterface):
     
     def MapReload(self, mapname : str) -> str:
         if self.IsOpened():
+            mapname = remoteconsole.sanitize_str(mapname)
             cmdStr = "map %s" % (mapname)
             proc = PtyInterface.MapReloadProcessor(cmdStr)
             return self.ExecuteCommand(cmdStr, proc)
