@@ -6,7 +6,7 @@ import lib.shared.threadcontrol as threadcontrol
 import lib.shared.remoteconsole as remoteconsole
 import io
 import queue
-import logMessage
+import lib.shared.logMessage as logMessage
 from file_read_backwards import FileReadBackwards
 from typing import Any, Self
 import re

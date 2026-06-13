@@ -1,6 +1,6 @@
 
 import logging
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config
 import lib.shared.client as client

@@ -13,10 +13,9 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
 # Kaiburr imports
-import kaiburrEvent
-from kaiburrEvent import Event
-from lib.shared.serverdata import ServerData
-from lib.shared.player import Player
+import lib.shared.kaiburrEvent as kaiburrEvent
+import lib.shared.serverdata as serverdata
+import lib.shared.player as player
 import lib.shared.teams as teams
 import lib.shared.colors as colors
 
@@ -32,7 +31,7 @@ class PlayerStats:
     kill_streak: int = 0
 
 class EloPlugin:
-    def __init__(self, server_data: ServerData):
+    def __init__(self, server_data: serverdata.ServerData):
         self.server_data = server_data
         self._is_initialized = False
         
@@ -279,7 +278,7 @@ class EloPlugin:
         
         return killer_change, victim_change
 
-    def process_kill(self, killer: Player, victim: Player, weapon_str: str, is_tk: bool = False):
+    def process_kill(self, killer: player.Player, victim: player.Player, weapon_str: str, is_tk: bool = False):
         """Process a kill and update ratings"""
         if not self._is_initialized or not self.server_running:
             return
@@ -384,7 +383,7 @@ class EloPlugin:
             """
             self.db_connection.ExecuteQuery(query)
 
-    def _notify_rating_change(self, player: Player, new_rating: int, change: int, is_killer: bool, kill_streak: int = 0):
+    def _notify_rating_change(self, player: player.Player, new_rating: int, change: int, is_killer: bool, kill_streak: int = 0):
         """Notify player of rating change"""
         player_id = player.GetId()
         
@@ -408,7 +407,7 @@ class EloPlugin:
         self.server_data.interface.SvTell(player_id, self.msg_prefix + message)
 
     # Command handlers
-    def _handle_rating(self, player: Player, team_id: int, args: list[str]) -> bool:
+    def _handle_rating(self, player: player.Player, team_id: int, args: list[str]) -> bool:
         """Handle !rating command"""
         player_id = player.GetId()
         rating = self.get_rating(player_id)
@@ -428,7 +427,7 @@ class EloPlugin:
         self.server_data.interface.SvTell(player_id, self.msg_prefix + message)
         return True
 
-    def _handle_stats(self, player: Player, team_id: int, args: list[str]) -> bool:
+    def _handle_stats(self, player: player.Player, team_id: int, args: list[str]) -> bool:
         """Handle !stats command"""
         player_id = player.GetId()
         account = self.get_account_by_pid(player_id)
@@ -475,7 +474,7 @@ class EloPlugin:
         
         return True
 
-    def _handle_leaderboard(self, player: Player, team_id: int, args: list[str]) -> bool:
+    def _handle_leaderboard(self, player: player.Player, team_id: int, args: list[str]) -> bool:
         """Handle !leaderboard command"""
         player_id = player.GetId()
         
@@ -504,7 +503,7 @@ class EloPlugin:
         
         return True
 
-    def _handle_rank(self, player: Player, team_id: int, args: list[str]) -> bool:
+    def _handle_rank(self, player: player.Player, team_id: int, args: list[str]) -> bool:
         """Handle !rank command"""
         player_id = player.GetId()
         account = self.get_account_by_pid(player_id)
@@ -619,7 +618,7 @@ class EloPlugin:
             self.server_data.interface.SmSay(self.msg_prefix + f"Failed to reload extralives: {e}")
         return True
 
-    def _find_player(self, prefix: str) -> Optional[Player]:
+    def _find_player(self, prefix: str) -> Optional[player.Player]:
         """Find player by name prefix"""
         prefix_lower = prefix.lower()
         clients = self.server_data.API.GetAllClients()
@@ -675,7 +674,7 @@ class EloPlugin:
             return 0
         return int(self.extralives_map.get(name, 0))
 
-    def _on_client_changed(self, event: Event):
+    def _on_client_changed(self, event: kaiburrEvent.Event):
         """Track player's current class/character name when they change class."""
         client = event.client
         if not client:
@@ -689,7 +688,7 @@ class EloPlugin:
                 Log.debug(f"Player {player_id} changed to class: {char_name}")
 
     # Event handlers
-    def _on_chat_message(self, event: Event):
+    def _on_chat_message(self, event: kaiburrEvent.Event):
         """Handle chat messages for commands"""
         client = event.client
         message = event.message
@@ -716,7 +715,7 @@ class EloPlugin:
                     self.server_data.interface.SvTell(client.GetId(), self.msg_prefix + "Command error occurred")
                 return
 
-    def _on_smsay(self, event: Event):
+    def _on_smsay(self, event: kaiburrEvent.Event):
         """Handle SMSAY commands"""
         player_name = event.playerName
         smod_id = event.smodID
@@ -742,7 +741,7 @@ class EloPlugin:
                     self.server_data.interface.SmSay("SMOD command error occurred")
                 return
 
-    def _on_client_connect(self, event: Event):
+    def _on_client_connect(self, event: kaiburrEvent.Event):
         """Handle client connection"""
         if event.isStartup:
             return
@@ -769,7 +768,7 @@ class EloPlugin:
         Log.debug(f"Player {client.GetName()} connected with rating {rating}")
         return False
 
-    def _on_client_disconnect(self, event: Event):
+    def _on_client_disconnect(self, event: kaiburrEvent.Event):
         """Handle client disconnection"""
         client = event.client
         if not client:
@@ -789,7 +788,7 @@ class EloPlugin:
         
         Log.debug(f"Player {client.GetName()} disconnected, cleared session data")
 
-    def _on_kill(self, event: Event):
+    def _on_kill(self, event: kaiburrEvent.Event):
         """Handle kill events"""
         killer = event.client
         victim = event.victim
@@ -799,7 +798,7 @@ class EloPlugin:
         if killer and victim:
             self.process_kill(killer, victim, weapon_str, is_tk)
 
-    def _on_server_init(self, event: Event):
+    def _on_server_init(self, event: kaiburrEvent.Event):
         """Handle server initialization"""
         current_time = time.time()
         
@@ -830,7 +829,7 @@ class EloPlugin:
         # Log.info("Elo system initialized for new server session")
         return False
 
-    def _on_server_shutdown(self, event: Event):
+    def _on_server_shutdown(self, event: kaiburrEvent.Event):
         """Handle server shutdown"""
         self.server_running = False
         Log.info("Elo system shutting down")
@@ -839,7 +838,7 @@ class EloPlugin:
 elo_plugin = None
 
 
-def OnInitialize(server_data: ServerData, exports=None):
+def OnInitialize(server_data: serverdata.ServerData, exports=None):
     """Initialize the Elo plugin"""
     global elo_plugin
     

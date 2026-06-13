@@ -1,6 +1,6 @@
 import lib.shared.rcon as rcon
 import lib.shared.colors as colors
-import kaiburrinterface
+import lib.shared.kaiburrinterface as kaiburrinterface
 
 class Cvar():
 

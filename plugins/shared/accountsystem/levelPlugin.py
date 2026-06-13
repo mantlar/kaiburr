@@ -2,7 +2,7 @@ import logging
 import os
 import math
 import json
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 import lib.shared.colors as colors
 import lib.shared.config as config
 import lib.shared.teams as teams

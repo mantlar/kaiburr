@@ -1,7 +1,7 @@
 
 import logging;
-import kaiburrEvent;
-import pluginExports;
+import lib.shared.kaiburrEvent as kaiburrEvent
+import lib.shared.pluginExports as pluginExports
 import lib.shared.serverdata as serverdata
 
 SERVER_DATA = None;

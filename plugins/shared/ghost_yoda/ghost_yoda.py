@@ -1,8 +1,7 @@
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
 import lib.shared.teams as teams
-import kaiburrEvent
-
+import lib.shared.kaiburrEvent as kaiburrEvent
 import threading
 import logging
 import asyncio

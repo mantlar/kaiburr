@@ -1,11 +1,11 @@
 
 import logging;
-import kaiburrEvent;
-import pluginExports;
+import lib.shared.kaiburrEvent as kaiburrEvent
+import lib.shared.pluginExports as pluginExports
 import lib.shared.serverdata as serverdata
 import lib.shared.config as config;
 import os;
-import database;
+import lib.shared.database as database;
 import lib.shared.client as client;
 import requests;
 import ipaddress;

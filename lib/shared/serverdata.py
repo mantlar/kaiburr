@@ -1,9 +1,9 @@
 import threading
 import lib.shared.pk3 as pk3;
-import kaiburrAPI;
+import lib.shared.kaiburrAPI as kaiburrAPI;
 import lib.shared.rcon as rcon;
-import cvar;
-import kaiburrinterface;
+import lib.shared.cvar as cvar;
+import lib.shared.kaiburrinterface as kaiburrinterface;
 
 class ServerData():
 

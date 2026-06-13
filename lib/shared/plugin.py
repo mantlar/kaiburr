@@ -1,5 +1,5 @@
 import importlib.util
-import pluginExports;
+import lib.shared.pluginExports as pluginExports;
 import logging;
 import importlib;
 import time;

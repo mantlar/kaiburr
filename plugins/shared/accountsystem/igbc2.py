@@ -11,14 +11,13 @@ import time
 from typing import Dict, Optional
 from zipfile import ZipFile
 from random import sample
-from kaiburrEvent import Event
+import lib.shared.kaiburrEvent as kaiburrEvent
 from lib.shared.serverdata import ServerData
-from database import DatabaseManager, ADatabase
+from lib.shared.database import DatabaseManager, ADatabase
 from lib.shared.player import Player
 import lib.shared.teams as teams
 import lib.shared.colors as colors
 import lib.shared.config as config
-import kaiburrEvent
 import json # Required for json.loads()
 
 # Initialize logger
@@ -1129,7 +1128,7 @@ class BankingPlugin:
 
         return False
 
-    def _on_kill(self, event: Event):
+    def _on_kill(self, event: kaiburrEvent.Event):
         """Award credits for kills using user_id"""
         killer_id = event.client.GetId()
         victim_id = event.victim.GetId()
@@ -1407,7 +1406,7 @@ class BankingPlugin:
             return 0
         return int(self.server_data.extralives_map.get(name, 0))
 
-    def _on_client_changed(self, event: Event):
+    def _on_client_changed(self, event: kaiburrEvent.Event):
         """Track player's current class/character name when they change class."""
         try:
             pid = event.client.GetId()
@@ -1426,7 +1425,7 @@ class BankingPlugin:
             Log.error(f"Error in _on_client_changed: {e}")
             return False
 
-    def _on_init_game(self, event: Event):
+    def _on_init_game(self, event: kaiburrEvent.Event):
         """Handle init game event - distribute scaled round start credits"""
         round_start_config = self.config.cfg.get("roundStartCredits", {})
         
@@ -1507,7 +1506,7 @@ class BankingPlugin:
         Log.info(f"Distributed round start credits to {success_count} players")
         return False
 
-    def _on_smsay(self, event : Event):
+    def _on_smsay(self, event : kaiburrEvent.Event):
         playerName = event.playerName
         smodID = event.smodID
         adminIP = event.adminIP
@@ -1533,13 +1532,13 @@ class BankingPlugin:
                 return self._smodCommandList[c][1](playerName, smodID, adminIP, cmdArgs)
         return False
 
-    def _on_objective(self, event : Event):
+    def _on_objective(self, event : kaiburrEvent.Event):
         if self.config.GetValue("objectiveCredits", None) != None and self.config.cfg["objectiveCredits"]["enabled"]:
             self.add_credits(event.client.GetId(), self.config.cfg["objectiveCredits"]["credits"])
             self.SvTell(event.client.GetId(), f"You have been awarded {self.config.cfg['objectiveCredits']['credits']} credits ({colors.ColorizeText(str(self.get_credits(event.client.GetId())), self.themecolor)}) for completing the objective!")
         return True
 
-    def _on_map_change(self, event : Event):
+    def _on_map_change(self, event : kaiburrEvent.Event):
         # Refund any purchased teams that weren't applied (because RTV didn't happen)
         for team_var in ["team1_purchased_teams", "team2_purchased_teams"]:
             purchased_teams = self.server_data.GetServerVar(team_var)
@@ -1619,7 +1618,7 @@ def OnFinish():
         banking_plugin = None
 
 
-def OnEvent(event: Event) -> bool:
+def OnEvent(event: kaiburrEvent.Event) -> bool:
     global banking_plugin
     if not banking_plugin:
         return False

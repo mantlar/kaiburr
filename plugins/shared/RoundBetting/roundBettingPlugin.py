@@ -7,7 +7,7 @@ import re
 from lib.shared.timeout import Timeout
 from lib.shared.player import Player
 import lib.shared.teams as teams
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 import lib.shared.colors as colors
 
 Log = logging.getLogger(__name__)

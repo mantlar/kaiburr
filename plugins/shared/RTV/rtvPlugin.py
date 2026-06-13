@@ -57,7 +57,7 @@ from time import sleep, time
 from zipfile import ZipFile
 
 # Import Kaiburr Event system and shared libraries
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 import lib.shared.client as client
 import lib.shared.config as config
 import lib.shared.player as player

@@ -8,13 +8,13 @@ import logging
 import os
 from time import time
 from typing import Dict, List, Optional
-from kaiburrEvent import Event
+from lib.shared.kaiburrEvent import Event
 from lib.shared.serverdata import ServerData
-from database import DatabaseManager
+from lib.shared.database import DatabaseManager
 from lib.shared.player import Player
 import lib.shared.teams as teams
 import lib.shared.colors as colors
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "login.db")
 DB_NAME = os.path.basename(DB_PATH)

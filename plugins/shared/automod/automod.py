@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 import logging
 
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 import lib.shared.client as client
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors

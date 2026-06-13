@@ -55,20 +55,20 @@ import lib.shared.config as config
 import lib.shared.rcon as rcon
 import lib.shared.serverdata as serverdata
 import lib.shared.threadcontrol as threadcontrol
-import kaiburrEvent
-import kaiburrAPI
+import lib.shared.kaiburrEvent as kaiburrEvent
+import lib.shared.kaiburrAPI as kaiburrAPI
 import lib.shared.client as client
 import lib.shared.clientmanager as clientmanager
 import lib.shared.pk3 as pk3
 # queue imported at top
-import database
-import plugin
+import lib.shared.database as database
+import lib.shared.plugin as plugin
 import lib.shared.teams as teams
-import logMessage
+import lib.shared.logMessage as logMessage
 import math
 import lib.shared.colors as colors
-import cvar
-import kaiburrinterface
+import lib.shared.cvar as cvar
+import lib.shared.kaiburrinterface as kaiburrinterface
 import lib.shared.timeout as timeout
 import lib.shared.pswd as pswd
 import lib.shared.observer as observer

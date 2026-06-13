@@ -1,4 +1,4 @@
-import kaiburrEvent
+import lib.shared.kaiburrEvent as kaiburrEvent
 import lib.shared.client as client
 import lib.shared.teams as teams
 import lib.shared.colors as colors

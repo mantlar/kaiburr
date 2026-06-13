@@ -1,6 +1,6 @@
 import logging;
-import kaiburrEvent;
-import pluginExports;
+import lib.shared.kaiburrEvent as kaiburrEvent
+import lib.shared.pluginExports as pluginExports
 import lib.shared.serverdata as serverdata
 import lib.shared.colors as colors
 import lib.shared.teams as teams
