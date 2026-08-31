@@ -425,9 +425,10 @@ class VoteteamswapPlugin:
         if not self._original_MapReload:
             self._original_MapReload = self._serverData.interface.MapReload
             
-            def HookedMapReload(mapname: str) -> str:
-                self._ApplyTeamsPreMapReload()
-                return self._original_MapReload(mapname)
+            def HookedMapReload(mapname: str, *args, **kwargs):
+                if not getattr(self._serverData, "admin_action", False):
+                    self._ApplyTeamsPreMapReload()
+                return self._original_MapReload(mapname, *args, **kwargs)
                 
             self._serverData.interface.MapReload = HookedMapReload
 

@@ -24,6 +24,8 @@ KAIBURR_EVENT_TYPE_ONNAMECHANGE       = 20 # NameChangeEvent - fires immediately
 KAIBURR_EVENT_TYPE_BANNED_ENTRY_ATTEMPT = 21 # BannedEntryAttemptEvent - fires when qconsole logs a banned ip connection attempt
 KAIBURR_EVENT_TYPE_SERVER_SAY         = 22 # ServerSayEvent - fires when the server broadcasts a message
 KAIBURR_EVENT_TYPE_ROUND_WINNER       = 23 # RoundWinnerEvent - fires when RoundWinner: RED/BLUE is logged
+KAIBURR_EVENT_TYPE_SMOD_SAY          = 24 # SmodBroadcastSayEvent - fires on SMOD red broadcast say
+KAIBURR_EVENT_TYPE_TELL              = 25 # TellEvent - fires on private messages (tell / PM)
 
 KAIBURR_EVENT_TYPE_WD_UNAVAILABLE     = 1000 # watchdog raised event, game process is not active, happens only upon startup of GF
 KAIBURR_EVENT_TYPE_WD_EXISTING        = 1001 # watchdog raised event, game process is exiting upon GF startup
@@ -152,3 +154,20 @@ class RoundWinnerEvent(Event):
     def __init__(self, winner_team : str, isStartup = False):
         self.winner_team = winner_team
         super().__init__(KAIBURR_EVENT_TYPE_ROUND_WINNER, {"winner_team": winner_team}, isStartup)
+
+class SmodBroadcastSayEvent(Event):
+    """Event fired when an admin uses SMOD say (red colored broadcast)."""
+    def __init__(self, playerName : str, smodID : int, adminIP : str, message : str, isStartup = False):
+        self.playerName = playerName
+        self.smodID = smodID
+        self.adminIP = adminIP
+        self.message = message
+        super().__init__(KAIBURR_EVENT_TYPE_SMOD_SAY, {}, isStartup)
+
+class TellEvent(Event):
+    """Event fired when a private message (tell / PM) is sent."""
+    def __init__(self, sender : str, target : str, message : str, isStartup = False):
+        self.sender = sender
+        self.target = target
+        self.message = message
+        super().__init__(KAIBURR_EVENT_TYPE_TELL, {}, isStartup)

@@ -199,22 +199,44 @@ class AntiAFKPlugin:
             Log.warning("SMOD login event missing IP address")
             return False
         
-        # Find the client with matching IP
+        target_client = None
         all_clients = self._serverData.API.GetAllClients()
-        for cl in all_clients:
-            client_ip = cl.GetIp().split(':')[0]  # Strip port
-            if client_ip == smod_ip:
-                player_id = cl.GetId()
-                if player_id in self._players:
-                    afk_player = self._players[player_id]
-                    afk_player.SetSmodLoggedIn(True)
-                    Log.info(f"Player {cl.GetName()} (ID: {player_id}) logged into SMOD - now exempt from AFK kicks")
-                    self.SvTell(player_id, "You are now exempt from AFK kicks (SMOD login)")
-                    # Reset their AFK counter since they're now exempt
-                    if afk_player.GetSpectatorRounds() > 0:
-                        Log.debug(f"Resetting AFK counter for SMOD user {cl.GetName()}")
-                        afk_player.ResetSpectatorRounds()
-                break
+        
+        # 1. Match by clean player name (most reliable when multiple clients share an IP)
+        if smod_name:
+            clean_smod_name = colors.StripColorCodes(smod_name).strip().lower()
+            for cl in all_clients:
+                if colors.StripColorCodes(cl.GetName()).strip().lower() == clean_smod_name:
+                    target_client = cl
+                    break
+
+        # 2. Match by exact IP (including port if present)
+        if not target_client and smod_ip:
+            for cl in all_clients:
+                if cl.GetIp() == smod_ip:
+                    target_client = cl
+                    break
+
+        # 3. Fallback: match by IP without port
+        if not target_client and smod_ip:
+            smod_ip_base = smod_ip.split(':')[0]
+            for cl in all_clients:
+                if cl.GetIp().split(':')[0] == smod_ip_base:
+                    target_client = cl
+                    break
+
+        if target_client:
+            player_id = target_client.GetId()
+            if player_id in self._players:
+                afk_player = self._players[player_id]
+                afk_player.SetSmodLoggedIn(True)
+                Log.info(f"Player {target_client.GetName()} (ID: {player_id}) logged into SMOD - now exempt from AFK kicks")
+                self.SvTell(player_id, "You are now exempt from AFK kicks (SMOD login)")
+                # Reset their AFK counter since they're now exempt
+                if afk_player.GetSpectatorRounds() > 0:
+                    Log.debug(f"Resetting AFK counter for SMOD user {target_client.GetName()}")
+                    afk_player.ResetSpectatorRounds()
+            return True
         
         return False
     

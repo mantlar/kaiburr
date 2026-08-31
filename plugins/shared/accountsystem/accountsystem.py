@@ -311,6 +311,13 @@ class AccountPlugin:
                     self.server_data.interface.SvTell(client_id, self.msg_prefix + "^1This account is already logged in on another client.")
                     return False
             
+            # Check for self-sync
+            if client_id in self.account_manager.accounts:
+                current_account = self.account_manager.accounts[client_id]
+                if current_account.user_id == user_id:
+                    self._tell_player(client_id, "Your current account is already synced to this Discord.")
+                    return False
+            
             # Update the existing account with the current IP and Name
             update_query = f"""
                 UPDATE user_credentials
@@ -319,9 +326,11 @@ class AccountPlugin:
             """
             self.account_manager.accounts_db.ExecuteQuery(update_query)
             
-            # Swap active session
+            # Merge and swap active session
             if client_id in self.account_manager.accounts:
                 old_account = self.account_manager.accounts[client_id]
+                if not old_account.is_dummy_account():
+                    self._merge_accounts(old_account.user_id, user_id)
                 old_account.invalidate_session()
                 old_account.set_client(None)
                 
@@ -329,6 +338,7 @@ class AccountPlugin:
             new_acc.last_login = last_login
             new_acc.set_account_var("discord_id", discord_id)
             self.account_manager.accounts[client_id] = new_acc
+            self._tell_player(client_id, f"You are now logged into account ID: {colors.ColorizeText(str(user_id), self.themecolor)}")
             return True
             
         else:
@@ -345,6 +355,53 @@ class AccountPlugin:
             self.account_manager.accounts_db.ExecuteQuery(update_query)
             current_account.set_account_var("discord_id", discord_id)
             return True
+
+    def _merge_accounts(self, source_id: int, target_id: int):
+        """Merge a temporary source account's data into the target canonical account."""
+        if source_id == target_id:
+            return
+
+        db = self.account_manager.accounts_db
+
+        # Merge banking
+        try:
+            db.ExecuteQuery(f"UPDATE banking SET credits = credits + IFNULL((SELECT credits FROM banking WHERE user_id = {source_id}), 0) WHERE user_id = {target_id}")
+            db.ExecuteQuery(f"DELETE FROM banking WHERE user_id = {source_id}")
+        except Exception as e:
+            Log.error(f"Error merging banking: {e}")
+
+        # Merge experience
+        try:
+            db.ExecuteQuery(f"UPDATE experience SET exp = exp + IFNULL((SELECT exp FROM experience WHERE user_id = {source_id}), 0) WHERE user_id = {target_id}")
+            db.ExecuteQuery(f"DELETE FROM experience WHERE user_id = {source_id}")
+        except Exception as e:
+            Log.error(f"Error merging experience: {e}")
+
+        # Merge elo_ratings
+        try:
+            # Add kills, deaths, games_played, rating_changes and keep the best ratings
+            query = f"""
+                UPDATE elo_ratings 
+                SET games_played = games_played + IFNULL((SELECT games_played FROM elo_ratings WHERE user_id = {source_id}), 0),
+                    kills = kills + IFNULL((SELECT kills FROM elo_ratings WHERE user_id = {source_id}), 0),
+                    deaths = deaths + IFNULL((SELECT deaths FROM elo_ratings WHERE user_id = {source_id}), 0),
+                    rating_changes = rating_changes + IFNULL((SELECT rating_changes FROM elo_ratings WHERE user_id = {source_id}), 0),
+                    rating = MAX(rating, IFNULL((SELECT rating FROM elo_ratings WHERE user_id = {source_id}), 0)),
+                    highest_rating = MAX(highest_rating, IFNULL((SELECT highest_rating FROM elo_ratings WHERE user_id = {source_id}), 0)),
+                    lowest_rating = MIN(lowest_rating, IFNULL((SELECT lowest_rating FROM elo_ratings WHERE user_id = {source_id}), 999999))
+                WHERE user_id = {target_id}
+            """
+            db.ExecuteQuery(query)
+            db.ExecuteQuery(f"DELETE FROM elo_ratings WHERE user_id = {source_id}")
+        except Exception as e:
+            Log.error(f"Error merging elo_ratings: {e}")
+
+        # Delete source account credentials
+        try:
+            db.ExecuteQuery(f"DELETE FROM user_credentials WHERE user_id = {source_id}")
+            Log.info(f"Successfully merged account {source_id} into {target_id}")
+        except Exception as e:
+            Log.error(f"Error deleting source account {source_id}: {e}")
 
     def load_or_create_account(self, player_name: str, ip_address: str, client: Player, display_welcome=True) -> tuple[Account, bool, Optional[str]]:
         """
@@ -398,6 +455,10 @@ class AccountPlugin:
         player_name = client.GetName()
         ip_address = client.GetIp()
     
+        if not player_name or not ip_address:
+            Log.info(f"Player ID {pid} connected with blank name or IP. Deferring account creation.")
+            return False
+
         if pid in self.account_manager.accounts:
             if self.account_manager.accounts[pid].player_name == player_name:
                 Log.warning(
@@ -443,26 +504,34 @@ class AccountPlugin:
 
     def _on_client_changed(self, event: Event):
         client_id = event.client.GetId()
-        if 'n' in event.data and client_id in self.account_manager.accounts:
-            if self.account_manager.accounts[client_id].player_name != event.data['n']:
-                old_name = self.account_manager.accounts[client_id].player_name
-                new_name = event.data['n']
-                Log.info(f"Player ID {client_id} changed name from '{old_name}' to '{new_name}'")
-                
-                # Log out current account
-                old_account = self.account_manager.accounts[client_id]
-                old_account.invalidate_session()
-                old_account.set_client(None)
-                del self.account_manager.accounts[client_id]
-                
-                # Get client IP and attempt to load/create account with new name
+        if 'n' in event.data:
+            new_name = event.data['n']
+            if client_id in self.account_manager.accounts:
+                if self.account_manager.accounts[client_id].player_name != new_name:
+                    old_name = self.account_manager.accounts[client_id].player_name
+                    Log.info(f"Player ID {client_id} changed name from '{old_name}' to '{new_name}'")
+                    
+                    # Log out current account
+                    old_account = self.account_manager.accounts[client_id]
+                    old_account.invalidate_session()
+                    old_account.set_client(None)
+                    del self.account_manager.accounts[client_id]
+                    
+                    # Get client IP and attempt to load/create account with new name
+                    ip_address = event.client.GetIp()
+                    account, created, welcome_message = self.load_or_create_account(new_name, ip_address, event.client, display_welcome=False)
+                    if welcome_message:
+                        if created:
+                            self._tell_player(client_id, f"Name changed to {new_name}^7! New account created automatically! (ID: {colors.ColorizeText(account.user_id, self.themecolor)})")
+                        else:
+                            self._tell_player(client_id, f"Name changed to {new_name}^7! Existing account loaded! (ID: {colors.ColorizeText(account.user_id, self.themecolor)})")
+            else:
+                # Deferred login from connection
                 ip_address = event.client.GetIp()
-                account, created, welcome_message = self.load_or_create_account(new_name, ip_address, event.client, display_welcome=False)
-                if welcome_message:
-                    if created:
-                        self._tell_player(client_id, f"Name changed to {new_name}^7! New account created automatically! (ID: {colors.ColorizeText(account.user_id, self.themecolor)})")
-                    else:
-                        self._tell_player(client_id, f"Name changed to {new_name}^7! Existing account loaded! (ID: {colors.ColorizeText(account.user_id, self.themecolor)})")
+                if new_name and ip_address:
+                    account, created, welcome_message = self.load_or_create_account(new_name, ip_address, event.client)
+                    if welcome_message:
+                        self._tell_player(client_id, welcome_message)
 
     def _register_commands(self):
         self._command_list = {
@@ -538,7 +607,7 @@ class AccountPlugin:
             return
 
         account = self.account_manager.create_account(client.GetName(),
-                                                      client.GetIP())
+                                                      client.GetIp())
         if account:
             account.player_id = pid
             self.account_manager.accounts[pid] = account

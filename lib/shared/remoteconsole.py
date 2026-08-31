@@ -235,6 +235,26 @@ class RCON(object):
         name = sanitize(player_name)
         return self.Request(b"\xff\xff\xff\xffrcon %b tempban \"%b\" %i" % (self._password, name, rounds))
 
+    def TempbanList(self):
+        return self.Request(b"\xff\xff\xff\xffrcon %b tempbanlist" % self._password)
+
+    def RemoveTempban(self, slot_or_ip):
+        val = sanitize(slot_or_ip)
+        return self.Request(b"\xff\xff\xff\xffrcon %b removetempban %b" % (self._password, val))
+
+    def NewRound(self):
+        return self.Request(b"\xff\xff\xff\xffrcon %b newround" % self._password)
+
+    def ForceTeam(self, player_id, team):
+        team = sanitize(team)
+        return self.Request(b"\xff\xff\xff\xffrcon %b forceteam %i %b" % (self._password, player_id, team))
+
+    def SetTK(self, player_id, points):
+        return self.Request(b"\xff\xff\xff\xffrcon %b settk %i %i" % (self._password, player_id, points))
+
+    def Shuffle(self):
+        return self.Request(b"\xff\xff\xff\xffrcon %b shuffle" % self._password)
+
     def Echo(self, msg):
         msg = sanitize(msg)
         return self.Request(b"\xff\xff\xff\xffrcon %b echo %b" % (self._password, msg))

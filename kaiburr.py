@@ -176,17 +176,22 @@ class MBIIServer:
 
     def ValidateConfig(self, cfg : config.Config) -> bool:
         if cfg == None:
+            Log.error("Config object is None.")
             return False
         # Server/Game path and name are global properties, check them
         if cfg.GetValue("MBIIPath", None) in [None, "your/path/here/"]:
+            Log.error("Config 'MBIIPath' is not set. Edit kaiburrCfg.json and set it to your MBII folder (e.g. C:/JediAcademy/GameData/MBII).")
             return False
         if cfg.GetValue("serverFileName", None) in [None, ""]:
+            Log.error("Config 'serverFileName' is not set. Edit kaiburrCfg.json and set it to your server executable name (e.g. mbiided.x86.exe).")
             return False
         if cfg.GetValue("serverPath", None) in [None, "your/path/here/"]:
+            Log.error("Config 'serverPath' is not set. Edit kaiburrCfg.json and set it to your server folder (e.g. C:/JediAcademy/GameData).")
             return False
 
         curVar = cfg.GetValue("interface", None)
         if curVar == None or ( curVar != "pty" and curVar != "rcon" ):
+            Log.error(f"Config 'interface' is invalid ('{curVar}'). It must be 'rcon'.")
             return False
         elif curVar == "pty":
             Log.error("pty Interface is not fully implemented, use rcon instead.")
@@ -299,6 +304,7 @@ class MBIIServer:
                 remote_logFilename = remote_cfg.get("logFilename", global_logFilename)
                 remote_qconsoleFilename = remote_cfg.get("qconsoleFilename", global_qconsoleFilename)
                 remote_port = remote_cfg.get("port", 0) # Port is mandatory for Rcon, but use 0 as a safe sentinel
+                emitter_port = remote_cfg.get("emitterPort", 0)
 
                 # NEW: Get password from remote config
                 remote_password = remote_cfg["password"]
@@ -318,9 +324,11 @@ class MBIIServer:
                                                                     shared_logReadDelay,
                                                                     shared_testRetrospect, # Uses shared/top-level value
                                                                     procName=self._config.cfg["serverFileName"],
-                                                                    qconsolePath=qconsolePath)
+                                                                    qconsolePath=qconsolePath,
+                                                                    emitterPort=emitter_port)
                 self._svInterfaces.append(interface)
-                Log.info(f"Initialized RconInterface #{idx+1} on {remote_ip}:{remote_port} (Bind: {shared_bindAddress}) using log file {remote_logFilename}" + (f" and qconsole {remote_qconsoleFilename}" if remote_qconsoleFilename else ""))
+                Log.info(f"Initialized RconInterface #{idx+1} on {remote_ip}:{remote_port} (Bind: {shared_bindAddress}) using " + 
+                         (f"UDP Emitter Port {emitter_port}" if emitter_port > 0 else f"log file {remote_logFilename}"))
 
         if len(self._svInterfaces) == 0:
             Log.error("Server interface(s) were not initialized properly or 'Remotes' list was empty.")
@@ -624,6 +632,12 @@ class MBIIServer:
             is_extended = self._primarySvInterface.GetCvar("sv_extended")
             self._serverData.is_extended = is_extended == "1"
 
+            for iface in self._svInterfaces:
+                if getattr(iface, "_emitterPort", 0) > 0 and not self._serverData.is_extended:
+                    err_msg = "ERROR: Emitter port is configured but the server is not running the extended engine (sv_extended). Emitter events will not be received!"
+                    Log.error(err_msg)
+                    self._primarySvInterface.SvSay(f"^1{err_msg}")
+
             if not self._pluginManager.Start():
                 return
             self._isRunning = True
@@ -717,6 +731,32 @@ class MBIIServer:
             self.OnBroadcastNameChange(message)
             return
 
+        if message.source == "emitter" and message.structured:
+            obj = message.structured
+            e = obj.get("e")
+            if e != "log":
+                if e == "MESSAGE":
+                    self.OnStructuredMessage(obj, message.isStartup)
+                elif e == "INIT":
+                    self.OnStructuredInit(obj, message.isStartup)
+                elif e == "SHUTDOWN":
+                    self.OnShutdownGame(message)
+                elif e == "CLIENTCONNECT":
+                    self.OnStructuredClientConnect(obj, message.isStartup)
+                elif e == "CLIENTDISCONNECT":
+                    self.OnStructuredClientDisconnect(obj, message.isStartup)
+                elif e == "CLIENTCHANGED":
+                    self.OnStructuredClientChanged(obj, message.isStartup)
+                elif e == "CLIENT_BEGIN":
+                    self.OnStructuredClientBegin(obj, message.isStartup)
+                elif e == "BANNED_ENTRY":
+                    self._pluginManager.Event(kaiburrEvent.BannedEntryAttemptEvent(obj.get("ip", "")))
+                elif e == "ROUND_WINNER":
+                    self._pluginManager.Event(kaiburrEvent.RoundWinnerEvent(obj.get("winner", ""), isStartup=message.isStartup))
+                elif e == "REAL_INIT":
+                    self.OnRealInit(message)
+                return
+
         # NEW: Check for qconsole banned entry attempts
         if line.startswith("SV packet "):
             if " : connect" in line:
@@ -750,7 +790,7 @@ class MBIIServer:
                     self._gatheringExitData = False
             if lineParse[0] == "SMOD":  # Handle SMOD commands
                 if lineParse[1] == "say:":      # smod server say (admin message)
-                    pass
+                    self.OnSmodSay(message)
                 elif lineParse[1] == "smsay:":   # smod chat smsay (admin-only chat message)
                     self.OnSmsay(message)
                 elif lineParse[1] == "command":
@@ -760,9 +800,13 @@ class MBIIServer:
             elif lineParse[0] == "say:" and l > 1 and lineParse[1] == "Server:": # Handle server broadcasts
                 self.OnServerSay(message)
             elif lineParse[1] == "say:":  # Handle say messages by players
-                self.OnChatMessage(message)
+                if message.source != "emitter":
+                    self.OnChatMessage(message)
             elif lineParse[1] == "sayteam:":
-                self.OnChatMessageTeam(message)
+                if message.source != "emitter":
+                    self.OnChatMessageTeam(message)
+            elif lineParse[0] == "tell:" or (l > 1 and lineParse[1] == "tell:"):
+                self.OnTell(message)
             elif lineParse[0] == "Player":
                 self.OnPlayer(message) # it's gonna be a long ride
             elif lineParse[0] == "Kill:":
@@ -771,20 +815,25 @@ class MBIIServer:
                 self._gatheringExitData = True
                 self._exitLogMessages.append(message)
             elif lineParse[0] == "ClientConnect:":
-                self.OnClientConnect(message)
+                if message.source != "emitter":
+                    self.OnClientConnect(message)
             elif lineParse[0] == "ClientBegin:":
-                self.OnClientBegin(message)
+                if message.source != "emitter":
+                    self.OnClientBegin(message)
             elif lineParse[0] == "InitGame:":
-                self.OnInitGame(message)
+                if message.source != "emitter":
+                    self.OnInitGame(message)
             elif lineParse[0] == "ClientDisconnect:":
-                self.OnClientDisconnect(message)
-            elif lineParse[0] == "ClientUserinfoChanged:":
+                if message.source != "emitter":
+                    self.OnClientDisconnect(message)
+            elif "ClientUserinfoChanged:" in line:
                 self.OnClientUserInfoChanged(message)
-            elif line.endswith(") completed the objective!"):
+            elif ") completed the objective!" in line:
                 self.OnObjective(message)
             elif "roundwinner:" in line.lower():
-                Log.debug("RoundWinner log entry parsed: %s", message.content)
-                self.OnRoundWinner(message)
+                if message.source != "emitter":
+                    Log.debug("RoundWinner log entry parsed: %s", message.content)
+                    self.OnRoundWinner(message)
             else:
                 return
 
@@ -900,6 +949,8 @@ class MBIIServer:
                         # client team changed
                         changedOld["team"] = cl.GetTeamId()
                         cl._teamId = newTeamId
+                        if cl._teamId != teams.TEAM_SPEC:
+                            cl._lastNonSpecTeamId = cl._teamId
 
                     if "name" in vars:
                         if cl.GetName() != vars["name"]:
@@ -1263,9 +1314,23 @@ class MBIIServer:
     def OnClientUserInfoChanged(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
         Log.debug("Client user info changed log entry %s", textified)
-        lineParse = textified.split()
-        clientId = int(lineParse[1])
-        userInfoString = textified[23 + len(lineParse[1]):].strip()
+        
+        pos = textified.find("ClientUserinfoChanged:")
+        if pos == -1:
+            return
+            
+        rest = textified[pos + len("ClientUserinfoChanged:"):].strip()
+        parts_split = rest.split(None, 1)
+        if not parts_split:
+            return
+            
+        try:
+            clientId = int(parts_split[0])
+        except ValueError:
+            Log.warning(f"Could not parse clientId from ClientUserinfoChanged: {textified}")
+            return
+
+        userInfoString = parts_split[1].strip() if len(parts_split) > 1 else ""
 
         cl = self._clientManager.GetClientById(clientId)
         if cl is None:
@@ -1278,8 +1343,9 @@ class MBIIServer:
 
         # Parse userinfo string into a dictionary
         userInfoDict = {}
+        if userInfoString.startswith("\\"):
+            userInfoString = userInfoString[1:]
         parts = userInfoString.split("\\")
-        # Handle potential empty strings from splitting
         if len(parts) > 1:
             for i in range(0, len(parts) - 1, 2):
                 if parts[i] and parts[i+1]: # Ensure key and value are not empty
@@ -1289,6 +1355,7 @@ class MBIIServer:
             Log.warning(f"Could not parse userinfo string '{userInfoString}' for client {clientId}, ignoring update.")
             return
 
+        Log.info(f"Parsed ClientUserinfoChanged for client {clientId}: {userInfoDict}")
 
         if "n" in userInfoDict and userInfoDict["n"] != cl.GetName():
             oldName = cl.GetName()
@@ -1300,7 +1367,7 @@ class MBIIServer:
             ))
 
         cl.Update(userInfoDict)
-        self._pluginManager.Event(kaiburrEvent.ClientChangedEvent(cl, cl.GetInfo(), isStartup=logMessage.isStartup))
+        self._pluginManager.Event(kaiburrEvent.ClientChangedEvent(cl, userInfoDict, isStartup=logMessage.isStartup))
 
     def OnInitGame(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
@@ -1311,14 +1378,15 @@ class MBIIServer:
         for index in range (0, len(splitted) - 1, 2):
             vars[splitted[index]] = splitted[index+1]
 
-        if "mapname" in vars:
-            if vars["mapname"] != self._serverData.mapName:
-                Log.debug("mapname cvar parsed, applying " + vars["mapname"] + " : OLD " + self._serverData.mapName)
-                if self._serverData.mapName != '':          # ignore first map ;
-                    self.OnMapChange(vars["mapname"], self._serverData.mapName)
-                self._serverData.mapName = vars["mapname"]
-        else:
-            self._serverData.mapName = self._primarySvInterface.GetCurrentMap()
+        mapName = vars.get("mapname")
+        if not mapName:
+            mapName = self._primarySvInterface.GetCurrentMap()
+
+        if mapName:
+            if self._serverData.mapName and mapName != self._serverData.mapName:
+                Log.debug("mapname cvar parsed, applying " + mapName + " : OLD " + self._serverData.mapName)
+                self.OnMapChange(mapName, self._serverData.mapName)
+            self._serverData.mapName = mapName
 
         Log.info("Current map name on init : %s", self._serverData.mapName)
 
@@ -1344,26 +1412,81 @@ class MBIIServer:
 
     def OnSmsay(self, logMessage : logMessage.LogMessage):
         textified = logMessage.content
-        Log.debug(f"Smod say event received: {textified}")
-        lineSplit = textified.split()
-
-        # Check if the token '(adminID:' is present in the list before trying to get its index.
-        if '(adminID:' in lineSplit:
-            adminIDIndex = lineSplit.index('(adminID:')
-            smodID = lineSplit[adminIDIndex + 1].strip(")")
-            senderName = ' '.join(lineSplit[2:adminIDIndex])
-            senderIP = lineSplit[adminIDIndex + 3].strip("):")
-            message = ' '.join(lineSplit[adminIDIndex + 4:])
+        Log.debug(f"Smod smsay event received: {textified}")
+        match = re.search(r'SMOD\s+smsay:\s+(.+?)\s*\(adminID:\s*(\d+)\)\s*\(IP:\s*([^)]+)\):\s*(.*)', textified)
+        if match:
+            senderName = match.group(1).strip()
+            smodID = int(match.group(2))
+            senderIP = match.group(3).strip()
+            message = match.group(4)
             messageLower = message.lower()
             cmdArgs = messageLower.split()
             if cmdArgs and cmdArgs[0].startswith("!"):
-                command = cmdArgs[0][1:]  # Remove the !
+                command = cmdArgs[0][1:]
                 if command.lower() == "help":
-                    self.HandleSmodHelp(senderName, smodID, senderIP, cmdArgs)
-                    return True  # Command handled, don't pass to plugins
-            self._pluginManager.Event(kaiburrEvent.SmodSayEvent(senderName, int(smodID), senderIP, message, isStartup = logMessage.isStartup))
+                    self.HandleSmodHelp(senderName, str(smodID), senderIP, cmdArgs)
+                    return True
+            self._pluginManager.Event(kaiburrEvent.SmodSayEvent(senderName, smodID, senderIP, message, isStartup=logMessage.isStartup))
         else:
-            pass
+            lineSplit = textified.split()
+            if '(adminID:' in lineSplit:
+                adminIDIndex = lineSplit.index('(adminID:')
+                smodID = lineSplit[adminIDIndex + 1].strip(")")
+                senderName = ' '.join(lineSplit[2:adminIDIndex])
+                senderIP = lineSplit[adminIDIndex + 3].strip("):")
+                message = ' '.join(lineSplit[adminIDIndex + 4:])
+                messageLower = message.lower()
+                cmdArgs = messageLower.split()
+                if cmdArgs and cmdArgs[0].startswith("!"):
+                    command = cmdArgs[0][1:]
+                    if command.lower() == "help":
+                        self.HandleSmodHelp(senderName, smodID, senderIP, cmdArgs)
+                        return True
+                self._pluginManager.Event(kaiburrEvent.SmodSayEvent(senderName, int(smodID), senderIP, message, isStartup=logMessage.isStartup))
+
+    def OnSmodSay(self, logMessage : logMessage.LogMessage):
+        textified = logMessage.content
+        Log.debug(f"Smod red say event received: {textified}")
+        match = re.search(r'SMOD\s+say:\s+(.+?)\s*\(adminID:\s*(\d+)\)\s*\(IP:\s*([^)]+)\):\s*(.*)', textified)
+        if match:
+            senderName = match.group(1).strip()
+            smodID = int(match.group(2))
+            senderIP = match.group(3).strip()
+            message = match.group(4)
+            self._pluginManager.Event(kaiburrEvent.SmodBroadcastSayEvent(senderName, smodID, senderIP, message, isStartup=logMessage.isStartup))
+        else:
+            lineSplit = textified.split()
+            if '(adminID:' in lineSplit:
+                adminIDIndex = lineSplit.index('(adminID:')
+                smodID = lineSplit[adminIDIndex + 1].strip(")")
+                senderName = ' '.join(lineSplit[2:adminIDIndex])
+                senderIP = lineSplit[adminIDIndex + 3].strip("):")
+                message = ' '.join(lineSplit[adminIDIndex + 4:])
+                self._pluginManager.Event(kaiburrEvent.SmodBroadcastSayEvent(senderName, int(smodID), senderIP, message, isStartup=logMessage.isStartup))
+
+    def OnTell(self, logMessage : logMessage.LogMessage):
+        textified = logMessage.content
+        Log.debug(f"Tell event received: {textified}")
+        content = textified
+        if "tell:" in content:
+            content = content[content.index("tell:") + 5:].strip()
+
+        if " to " in content:
+            parts = content.split(" to ", 1)
+            sender = parts[0].strip()
+            target_and_msg = parts[1]
+            if ": " in target_and_msg:
+                target_parts = target_and_msg.split(": ", 1)
+                target = target_parts[0].strip()
+                msg = target_parts[1]
+            elif ":" in target_and_msg:
+                target_parts = target_and_msg.split(":", 1)
+                target = target_parts[0].strip()
+                msg = target_parts[1].strip()
+            else:
+                target = target_and_msg.strip()
+                msg = ""
+            self._pluginManager.Event(kaiburrEvent.TellEvent(sender, target, msg, isStartup=logMessage.isStartup))
 
     def OnSmodCommand(self, logMessage : logMessage.LogMessage):
         Log.debug(f"SmodCommand change event received: {logMessage.content}")
@@ -1513,6 +1636,113 @@ class MBIIServer:
 
     def API_GetDatabase(self, name) -> database.ADatabase:
         return self._dbManager.GetDatabase(name)
+
+    def OnStructuredMessage(self, obj, isStartup=False):
+        senderId = obj.get("client")
+        senderClient = self._clientManager.GetClientById(senderId)
+        message = obj.get("message", "")
+        is_team = str(obj.get("is_team", "")).lower() == "true"
+        
+        if senderClient is None:
+            Log.warning(f"OnStructuredMessage: client {senderId} not found, ignoring message")
+            return
+
+        msgType = "sayteam" if is_team else "say"
+        messageRaw = f'{senderId}: {msgType}: "{message}"'
+        teamId = senderClient.GetTeamId() if is_team else teams.TEAM_GLOBAL
+        
+        if message.startswith("!"):
+            cmdArgs = message[1:].split()
+            floodProtectionConfig = self._config.GetValue("floodProtection", {"enabled": False, "soft": False, "seconds": 1.5})
+            if floodProtectionConfig["enabled"] and len(cmdArgs) > 0:
+                command = cmdArgs[0].lower()
+                if senderClient._floodProtectionCooldown.IsSet():
+                    if (floodProtectionConfig["soft"] and command == senderClient._lastCommand) or not floodProtectionConfig["soft"]:
+                        return
+                senderClient._floodProtectionCooldown.Set(floodProtectionConfig["seconds"])
+                senderClient._lastCommand = command
+                
+            if len(cmdArgs) > 0 and cmdArgs[0].lower() == "help":
+                self.HandleChatHelp(senderClient, teamId, cmdArgs)
+                self._pluginManager.Event(kaiburrEvent.MessageEvent(senderClient, message, {'messageRaw': messageRaw}, teamId, isStartup=isStartup))
+                return
+        self._pluginManager.Event(kaiburrEvent.MessageEvent(senderClient, message, {'messageRaw': messageRaw}, teamId, isStartup=isStartup))
+
+    def OnStructuredInit(self, obj, isStartup=False):
+        # The engine sends the server info string under "infoString" (e.g. "\\mapname\\mb2_dotf\\...")
+        # Parse it into a vars dict, matching the legacy OnInitGame behavior.
+        vars = {}
+        infoString = obj.get("infoString", "")
+        if infoString:
+            if infoString.startswith("\\"):
+                infoString = infoString[1:]
+            splitted = infoString.split("\\")
+            for index in range(0, len(splitted) - 1, 2):
+                vars[splitted[index]] = splitted[index+1]
+        
+        mapName = vars.get("mapname")
+        if not mapName:
+            mapName = self._primarySvInterface.GetCurrentMap()
+
+        if mapName:
+            if self._serverData.mapName and mapName != self._serverData.mapName:
+                Log.debug("mapname cvar parsed, applying " + mapName + " : OLD " + self._serverData.mapName)
+                self.OnMapChange(mapName, self._serverData.mapName)
+            self._serverData.mapName = mapName
+
+        Log.info("Current map name on init : %s", self._serverData.mapName)
+
+        self._pluginManager.Event(kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_INIT, {"vars": vars}, isStartup=isStartup))
+        self._pluginManager.Event( kaiburrEvent.Event( kaiburrEvent.KAIBURR_EVENT_TYPE_POST_INIT, {}, isStartup = isStartup ) )
+
+    def OnStructuredClientConnect(self, obj, isStartup=False):
+        pidNum = obj.get("client")
+        ip = obj.get("ip", "")
+        name = obj.get("name", "")
+        if not pidNum in [cl.GetId() for cl in self.API_GetAllClients()]:
+            newClient = client.Client(pidNum, name, ip)
+            self._clientManager.AddClient(newClient)
+            self._pluginManager.Event(kaiburrEvent.ClientConnectEvent(newClient, None, isStartup=isStartup))
+
+    def OnStructuredClientDisconnect(self, obj, isStartup=False):
+        pidNum = obj.get("client")
+        cl = self._clientManager.GetClientById(pidNum)
+        if cl is not None:
+            Log.debug("Structured disconnect for client %s", str(cl))
+            self._pluginManager.Event(kaiburrEvent.ClientDisconnectEvent(cl, {}, isStartup=isStartup))
+            self._clientManager.RemoveClientById(pidNum)
+            if self._clientManager.GetClientCount() == 0:
+                Log.debug("All players have left the server")
+                self._pluginManager.Event(kaiburrEvent.ServerEmptyEvent(isStartup=isStartup))
+
+    def OnStructuredClientChanged(self, obj, isStartup=False):
+        pidNum = obj.get("client")
+        cl = self._clientManager.GetClientById(pidNum)
+        if cl != None:
+            info = obj.get("infoString", "")
+            if info.startswith("\\"): info = info[1:]
+            splitui = info.split("\\")
+            vars = {}
+            for index in range(0, len(splitui) - 1, 2):
+                vars[splitui[index]] = splitui[index+1]
+                
+            Log.info(f"[DEBUG] OnStructuredClientChanged for {pidNum} parsed vars: {vars}")
+            
+            if "n" in vars and vars["n"] != cl.GetName():
+                oldName = cl.GetName()
+                newName = vars["n"]
+                self._pluginManager.Event(kaiburrEvent.NameChangeEvent(
+                    cl, oldName, newName,
+                    isStartup=isStartup
+                ))
+
+            cl.Update(vars)
+            self._pluginManager.Event(kaiburrEvent.ClientChangedEvent(cl, cl.GetInfo(), isStartup=isStartup))
+
+    def OnStructuredClientBegin(self, obj, isStartup=False):
+        pidNum = obj.get("client")
+        cl = self._clientManager.GetClientById(pidNum)
+        self._pluginManager.Event(kaiburrEvent.ClientBeginEvent(cl, {}, isStartup=isStartup))
 
     def API_GetPlugin(self, name) -> plugin.Plugin:
         return self._pluginManager.GetPlugin(name)

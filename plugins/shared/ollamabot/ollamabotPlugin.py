@@ -25,7 +25,8 @@ class OllamabotPlugin:
             "periodic_interval": 300,
             "context_length": 10,
             "api_url": "http://127.0.0.1:11434/api/generate",
-            "bot_name": "ollamabot"
+            "bot_name": "ollamabot",
+            "learn_from_chat": True
         }
         self.chat_history = []
         self.response_queue = []
@@ -86,7 +87,7 @@ class OllamabotPlugin:
                     self.player_messages_pool = [line.strip() for line in f if line.strip()]
                 if not self.player_messages_pool:
                     self.player_messages_pool = default_pool
-                elif len(self.player_messages_pool) > 500:
+                elif self.config.get("learn_from_chat", True) and len(self.player_messages_pool) > 500:
                     self.player_messages_pool = self.player_messages_pool[-500:]
             except Exception as e:
                 Log.error(f"Failed to load player_chat_pool.txt: {e}")
@@ -121,7 +122,7 @@ class OllamabotPlugin:
         is_real_command = (msg_text.startswith("!") and not msg_text.startswith("!ai ")) or msg_text.startswith("/")
         is_bot = sender_name.lower() == self.config["bot_name"].lower()
         if not is_real_command and not is_bot:
-            if display_text:
+            if display_text and self.config.get("learn_from_chat", True):
                 self.player_messages_pool.append(display_text)
                 if len(self.player_messages_pool) > 500:
                     self.player_messages_pool.pop(0)
@@ -158,8 +159,8 @@ class OllamabotPlugin:
         # Inject style guide dynamically from collected player messages pool
         if self.player_messages_pool:
             # Filter and sanitize messages for style examples
-            filtered_msgs = []
-            for msg in reversed(self.player_messages_pool):
+            valid_msgs = []
+            for msg in self.player_messages_pool:
                 msg_clean = msg.strip()
                 if not msg_clean:
                     continue
@@ -171,10 +172,9 @@ class OllamabotPlugin:
                 jailbreak_words = ["ignore", "instruction", "prompt", "system:", "translate", "assistant", "system prompt"]
                 if any(w in msg_lower for w in jailbreak_words):
                     continue
-                filtered_msgs.append(msg_clean)
-                if len(filtered_msgs) >= 30:
-                    break
-            filtered_msgs.reverse()
+                valid_msgs.append(msg_clean)
+                
+            filtered_msgs = random.sample(valid_msgs, min(len(valid_msgs), 30))
             
             if filtered_msgs:
                 style_examples = "\n".join([f"- {msg}" for msg in filtered_msgs])
@@ -299,7 +299,10 @@ class OllamabotPlugin:
                 self.last_periodic_time = current_time
                 # Only trigger if there is conversation history
                 if len(self.chat_history) > 0:
-                    self.TriggerOllama()
+                    # Don't trigger periodically if the bot was the last one to speak
+                    last_speaker = self.chat_history[-1][0]
+                    if last_speaker != self.config["bot_name"]:
+                        self.TriggerOllama()
 
         with self.queue_lock:
             while self.response_queue:

@@ -70,7 +70,7 @@ def dispatch_discord_coro(coro):
 _bridge_global_timestamps = deque()
 _BRIDGE_GLOBAL_LIMIT = 5
 _BRIDGE_GLOBAL_WINDOW = 5.0
-# Per-user: dict of {user_id: deque of timestamps}, max 3 messages per 3 seconds
+# Per-user: dict of {user_id: deque of timestamps}, max 1 message per 1 second
 _bridge_user_timestamps = {}
 _BRIDGE_USER_LIMIT = 1
 _BRIDGE_USER_WINDOW = 1.0
@@ -301,10 +301,53 @@ class GhostYodaPlugin(object):
         dispatch_discord_coro(send_chat_log_to_discord(msg))
         return False
 
+    def ProcessNameChange(self, event):
+        """Forward player name changes to Discord."""
+        cl = event.client
+        cid = cl.GetId() if cl else "?"
+        old_name = colors.StripColorCodes(event.oldName)
+        new_name = colors.StripColorCodes(event.newName)
+        msg = f"✏️ {cid}: rename: {old_name} -> {new_name}"
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
+        return False
+
+    def ProcessSmsay(self, event):
+        """Forward SMOD admin chat (smsay) to Discord admin actions channel."""
+        data = {
+            "smod_name": event.playerName,
+            "smod_id": str(event.smodID),
+            "smod_ip": event.adminIP,
+            "command": "smsay",
+            "args": event.message
+        }
+        
+        dispatch_discord_coro(send_admin_action_to_discord(data))
+        return False
+
+    def ProcessSmodSay(self, event):
+        """Forward SMOD red broadcast (say) to Discord admin actions channel."""
+        data = {
+            "smod_name": event.playerName,
+            "smod_id": str(event.smodID),
+            "smod_ip": event.adminIP,
+            "command": "say",
+            "args": event.message
+        }
+        
+        dispatch_discord_coro(send_admin_action_to_discord(data))
+        return False
+
+    def ProcessTell(self, event):
+        """Forward private messages (tell / PM) to Discord."""
+        sender = colors.StripColorCodes(event.sender)
+        target = colors.StripColorCodes(event.target)
+        msg_text = colors.StripColorCodes(event.message)
+        msg = f"📩 tell: {sender} -> {target}: \"{msg_text}\""
+        dispatch_discord_coro(send_chat_log_to_discord(msg))
+        return False
+
     def ProcessMessage(self, event):
         """Catch commands by routing through _commandList and broadcast to Discord."""
-        
-        # Construct the chat log string and dump it to Discord
         cl = event.client
         msg = f"💬 {cl.GetId()}: say: {colors.StripColorCodes(cl.GetName())}: \"{colors.StripColorCodes(event.message)}\""
         dispatch_discord_coro(send_chat_log_to_discord(msg))
@@ -448,7 +491,7 @@ async def on_message(message):
     now = time.monotonic()
     user_id = message.author.id
 
-    # --- Per-user rate limit: 3 messages per 3 seconds ---
+    # --- Per-user rate limit: 1 message per 1 second ---
     # Check if user is currently blocked
     unblock_time = _bridge_user_blocked.get(user_id)
     if unblock_time is not None:
@@ -555,15 +598,15 @@ async def send_admin_action_to_discord(admin_data):
     if not channel: return
 
     # Admin action format matching user specified
-    smod_name = admin_data.get('smod_name', 'Unknown')
+    smod_name = colors.StripColorCodes(str(admin_data.get('smod_name', 'Unknown')))
     smod_id = admin_data.get('smod_id', 'Unknown')
     smod_ip = admin_data.get('smod_ip', 'Unknown')
     command = admin_data.get('command', 'Unknown')
-    args = admin_data.get('args', '')
+    args = colors.StripColorCodes(str(admin_data.get('args', '')))
     
     target_str = ""
     if admin_data.get('target_name'):
-        target_name = admin_data.get('target_name')
+        target_name = colors.StripColorCodes(str(admin_data.get('target_name')))
         target_ip = admin_data.get('target_ip', '')
         target_str = f"__Target:__    `{target_name}` {target_ip}"
 
@@ -667,6 +710,14 @@ def OnEvent(event) -> bool:
         return PluginInstance.ProcessClientConnect(event)
     elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
         return PluginInstance.ProcessClientDisconnect(event)
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_ONNAMECHANGE:
+        return PluginInstance.ProcessNameChange(event)
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMSAY:
+        return PluginInstance.ProcessSmsay(event)
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_SMOD_SAY:
+        return PluginInstance.ProcessSmodSay(event)
+    elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_TELL:
+        return PluginInstance.ProcessTell(event)
     return False
 
 if __name__ == "__main__":

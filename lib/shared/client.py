@@ -11,7 +11,8 @@ class Client(object):
         self._id = id;
         self._name = name;
         self._address = address;
-        self._ip = address[:address.rfind(":")];
+        colon_pos = address.rfind(":")
+        self._ip = address[:colon_pos] if colon_pos > 0 else address;
         self._teamId = teams.TEAM_SPEC;
         self._jaguid = "";
         self._userinfo = {};
@@ -66,10 +67,18 @@ class Client(object):
             if key == "n" and self._name != value:
                 # logMessage(f"Client {self} has changed their name to {value}")
                 self._name = value
-            if key == "t" and (teams.TranslateTeam(int(self._teamId)) != teams.TranslateTeam(int(value)) or self._teamId == None):
-                # if teams.TranslateTeam(int(value)) != "s":     # ignore spectator since the game switches your team to spectator at the beginning of each round, messing with voting.
-                self._teamId = int(value)
-                log.info(f"Client {self} has joined team {self._teamId}")
-                if self._teamId != teams.TEAM_SPEC:
-                    self._lastNonSpecTeamId = self._teamId
+            if (key == "t" or key == "team"):
+                if key == "team":
+                    try:
+                        new_team_id = int(value)
+                    except ValueError:
+                        new_team_id = teams.TranslateTeam(value)
+                else:
+                    new_team_id = int(value)
+                    
+                if (teams.TranslateTeam(int(self._teamId)) != teams.TranslateTeam(new_team_id) or self._teamId == None):
+                    self._teamId = new_team_id
+                    log.info(f"Client {self} has joined team {self._teamId}")
+                    if self._teamId != teams.TEAM_SPEC:
+                        self._lastNonSpecTeamId = self._teamId
             self._userinfo[key] = value

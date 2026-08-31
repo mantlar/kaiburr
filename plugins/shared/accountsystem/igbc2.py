@@ -336,6 +336,7 @@ class BankingPlugin:
         self.active_bounties : dict[int, Bounty] = {}  # target_id: Bounty
         self.player_rounds : dict[int, int] = {}  # player_id: rounds_played
         self.player_class_by_pid : dict[int, str] = {}  # player_id: current character/class name
+        self.players_awarded_this_round = set()
         self.team_container = SiegeTeamContainer(GetAllTeams(), self)
         self._register_commands()
         # self.initialize_banking_table()
@@ -1077,10 +1078,16 @@ class BankingPlugin:
                 return False
 
             cmd = args[0].lower()
-            for c in self._command_list[team_id]:
-                if cmd in c:
-                    return self._command_list[team_id][c][1](client, team_id,
-                                                             args)
+            if team_id in self._command_list:
+                for c in self._command_list[team_id]:
+                    if cmd in c:
+                        return self._command_list[team_id][c][1](client, team_id,
+                                                                 args)
+            if teams.TEAM_GLOBAL in self._command_list:
+                for c in self._command_list[teams.TEAM_GLOBAL]:
+                    if cmd in c:
+                        return self._command_list[teams.TEAM_GLOBAL][c][1](client, team_id,
+                                                                 args)
         return False
 
     def _on_client_connect(self, event: kaiburrEvent.ClientConnectEvent):
@@ -1414,10 +1421,18 @@ class BankingPlugin:
             char_name = None
             data = getattr(event, "data", {}) or {}
             key = 'sc'
+            
+            # First try event.data (which might be the full userinfo or just a delta)
             if key in data and isinstance(data[key], str) and data[key]:
                 char_name = data[key]
             else:
-                Log.error(f"Could not find class name for player {pid}")
+                # Fallback to the client's full cached userinfo
+                client_info = event.client.GetInfo()
+                if key in client_info and isinstance(client_info[key], str) and client_info[key]:
+                    char_name = client_info[key]
+                    
+            if not char_name:
+                Log.debug(f"Could not find class name for player {pid} (likely a spectator or team change)")
                 return False
             self.player_class_by_pid[pid] = char_name
             return True
@@ -1426,85 +1441,74 @@ class BankingPlugin:
             return False
 
     def _on_init_game(self, event: kaiburrEvent.Event):
-        """Handle init game event - distribute scaled round start credits"""
+        """Handle init game event - distribute round start credits instantly"""
         round_start_config = self.config.cfg.get("roundStartCredits", {})
         
-        # Handle legacy config (integer) or check if disabled
         if isinstance(round_start_config, int):
             if round_start_config <= 0:
-                return False
-            # Legacy mode: use fixed amount
+                return
             min_credits = max_credits = round_start_config
             max_rounds = 1
             enabled = True
         else:
             enabled = round_start_config.get("enabled", False)
             if not enabled:
-                return False
+                return
             min_credits = round_start_config.get("minCredits", 10)
             max_credits = round_start_config.get("maxCredits", 50)
             max_rounds = round_start_config.get("maxRounds", 5)
+            
+        Log.info(f"Distributing round start credits instantly to all connected accounts (min: {min_credits}, max: {max_credits})")
         
-        Log.info(f"Distributing scaled round start credits to active players (min: {min_credits}, max: {max_credits}, maxRounds: {max_rounds})")
-        
-        # Find all players who have a last non-spec team (were playing)
+        # Give credits to all clients currently connected with an account, regardless of team
         eligible_players = []
         for client in self.server_data.API.GetAllClients():
-            last_team = client.GetLastNonSpecTeamId()
-            if last_team is not None:
-                player_id = client.GetId()
-                if player_id in self.account_manager.accounts:
-                    eligible_players.append((player_id, client.GetName()))
-        
-        if len(eligible_players) == 0:
+            player_id = client.GetId()
+            if player_id in self.account_manager.accounts:
+                eligible_players.append((player_id, client.GetName()))
+                
+        if not eligible_players:
             Log.debug("No eligible players for round start credits")
-            return False
-        
-        # Add credits to each eligible player with scaling
+            return
+            
         success_count = 0
         batch_commands = []
+        
         for player_id, player_name in eligible_players:
             try:
-                # Increment rounds played for this player
                 if player_id not in self.player_rounds:
                     self.player_rounds[player_id] = 0
                 self.player_rounds[player_id] += 1
                 
                 rounds_played = self.player_rounds[player_id]
                 
-                # Calculate scaled credits based on rounds played
                 if rounds_played >= max_rounds:
                     credits_to_award = max_credits
                 else:
-                    # Linear scaling from minCredits to maxCredits
                     credits_range = max_credits - min_credits
-                    credits_to_award = min_credits + int((credits_range * rounds_played) / max_rounds)
-                
+                    credits_to_award = min_credits + int((credits_range * rounds_played) / max(1, max_rounds))
+                    
                 old_credits = self.get_credits(player_id)
                 if old_credits is not None:
                     self.add_credits(player_id, credits_to_award)
                     new_credits = self.get_credits(player_id)
                     
-                    # Prepare notification message for batch execution
                     message = (
                         f"{self.msg_prefix}Round start bonus: {colors.ColorizeText(str(credits_to_award), self.themecolor)} credits! "
                         f"(Round {rounds_played}/{max_rounds}) "
                         f"Balance: {colors.ColorizeText(str(new_credits), self.themecolor)} credits."
                     )
-                    batch_commands.append(f"svtell {player_id} {message}")
-                    batch_commands.append("wait 1")
+                    batch_commands.append(f"svtell {player_id} \"{message}\"")
                     
                     success_count += 1
-                    Log.debug(f"Added {credits_to_award} round start credits to {player_name} (ID: {player_id}, Round {rounds_played}): {old_credits} -> {new_credits}")
+                    Log.debug(f"Added {credits_to_award} round start credits to {player_name} (ID: {player_id})")
             except Exception as e:
                 Log.error(f"Failed to add round start credits to player {player_name} (ID: {player_id}): {e}")
-        
-        # Send all notifications at once using batch execution
+                
         if batch_commands:
-            self.server_data.interface.BatchExecute('b', batch_commands)
-        
+            self.server_data.interface.BatchExecute('b', batch_commands, sleepBetweenChunks=0.1)
+            
         Log.info(f"Distributed round start credits to {success_count} players")
-        return False
 
     def _on_smsay(self, event : kaiburrEvent.Event):
         playerName = event.playerName
@@ -1608,7 +1612,6 @@ def init_accountsystem_xprts(plugin : BankingPlugin):
 
 def OnLoop() -> bool:
     return False
-
 
 def OnFinish():
     global banking_plugin

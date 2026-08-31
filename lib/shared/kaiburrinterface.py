@@ -7,7 +7,6 @@ import lib.shared.remoteconsole as remoteconsole
 import io
 import queue
 import lib.shared.logMessage as logMessage
-from file_read_backwards import FileReadBackwards
 from typing import Any, Self
 import re
 import lib.shared.colors as colors
@@ -17,6 +16,7 @@ import math
 import lib.shared.pswd as pswd
 import lib.shared.observer as observer
 import psutil
+from lib.shared.eventsource import EmitterSource
 
 IsUnix = (os.name == "posix")
 IsWindows = (os.name == "nt")
@@ -210,21 +210,27 @@ class AServerInterface(IServerInterface):
 
 
 class RconInterface(AServerInterface):
-    def __init__(self, ipAddress : str, port : str, bindAddr : tuple, password : str, logPath : str, readDelay : int = 0.01, testRetrospect = False, procName = "mbiided.i386" if IsUnix else "mbiided.x86.exe", qconsolePath : str = None):
+    def __init__(self, ipAddress : str, port : str, bindAddr : tuple, password : str, logPath : str, readDelay : int = 0.01, testRetrospect = False, procName = "mbiided.i386" if IsUnix else "mbiided.x86.exe", qconsolePath : str = None, emitterPort: int = 0):
         super().__init__()
-        self._logReaderLock = threading.Lock()
-        self._logReaderThreadControl = threadcontrol.ThreadControl()
-        self._logReaderTime = readDelay
-        self._logReaderThread = threading.Thread(target=self.ParseLogThreadHandler, daemon=True,
-                                                 args=(self._logReaderThreadControl, self._logReaderTime, logPath, False))
+        self._emitterPort = emitterPort
+        self._emitterSource = None
+        self._qconsolePath = qconsolePath
         self._logPath = logPath
 
-        self._qconsolePath = qconsolePath
-        if self._qconsolePath:
-            self._qconsoleReaderLock = threading.Lock()
-            self._qconsoleReaderThreadControl = threadcontrol.ThreadControl()
-            self._qconsoleReaderThread = threading.Thread(target=self.ParseLogThreadHandler, daemon=True,
-                                                     args=(self._qconsoleReaderThreadControl, self._logReaderTime, self._qconsolePath, True))
+        if self._emitterPort > 0:
+            self._emitterSource = EmitterSource(self._emitterPort)
+        else:
+            self._logReaderLock = threading.Lock()
+            self._logReaderThreadControl = threadcontrol.ThreadControl()
+            self._logReaderTime = readDelay
+            self._logReaderThread = threading.Thread(target=self.ParseLogThreadHandler, daemon=True,
+                                                     args=(self._logReaderThreadControl, self._logReaderTime, logPath, False))
+
+            if self._qconsolePath:
+                self._qconsoleReaderLock = threading.Lock()
+                self._qconsoleReaderThreadControl = threadcontrol.ThreadControl()
+                self._qconsoleReaderThread = threading.Thread(target=self.ParseLogThreadHandler, daemon=True,
+                                                         args=(self._qconsoleReaderThreadControl, self._logReaderTime, self._qconsolePath, True))
 
         self._rcon = remoteconsole.RCON((ipAddress, port), bindAddr, password)
         self._testRetrospect = testRetrospect
@@ -252,6 +258,14 @@ class RconInterface(AServerInterface):
         if event == pswd.WD_EVENT_PROCESS_RESTARTED:
             with self._queueLock:
                 self._workingMessageQueue.put(logMessage.LogMessage("wd_restarted"))
+
+    def GetMessages(self) -> queue.Queue:
+        if self._emitterSource:
+            source_q = self._emitterSource.GetMessages()
+            while not source_q.empty():
+                with self._queueLock:
+                    self._workingMessageQueue.put(source_q.get_nowait())
+        return super().GetMessages()
     
     def SvSay(self, text : str, tryAgain: bool = False) -> str:
         if self.IsOpened():
@@ -309,6 +323,36 @@ class RconInterface(AServerInterface):
     def Tempban(self, name : str, rounds : int) -> str:
         if self.IsOpened():
             return self._rcon.Tempban(name, rounds)
+        return None
+
+    def TempbanList(self) -> str:
+        if self.IsOpened():
+            return self._rcon.TempbanList()
+        return None
+
+    def RemoveTempban(self, slot_or_ip : str) -> str:
+        if self.IsOpened():
+            return self._rcon.RemoveTempban(slot_or_ip)
+        return None
+
+    def NewRound(self) -> str:
+        if self.IsOpened():
+            return self._rcon.NewRound()
+        return None
+
+    def ForceTeam(self, pid : int, team : str) -> str:
+        if self.IsOpened():
+            return self._rcon.ForceTeam(pid, team)
+        return None
+
+    def SetTK(self, pid : int, points : int) -> str:
+        if self.IsOpened():
+            return self._rcon.SetTK(pid, points)
+        return None
+
+    def Shuffle(self) -> str:
+        if self.IsOpened():
+            return self._rcon.Shuffle()
         return None
 
     def SetCvar(self, cvarName : str, value : str) -> str:
@@ -373,7 +417,7 @@ class RconInterface(AServerInterface):
     
     def DumpUser(self, pid : int) -> str:
         if self.IsOpened():
-            return self._rcon.DumpUser(pid)
+            return self._rcon.dumpuser(pid)
         return None
 
     def SvSound(self, soundName : str) -> str:
@@ -469,6 +513,12 @@ class RconInterface(AServerInterface):
             return False
         self._watchdog.Start()
 
+        if self._emitterSource:
+            self._emitterSource.Open()
+            self._isOpened = True
+            self._isReady = True
+            return True
+
         if not os.path.exists(self._logPath):
             try:
                 with open(self._logPath, "w", encoding="utf-8") as f:
@@ -478,15 +528,26 @@ class RconInterface(AServerInterface):
                 return False
 
         prestartLines = []
-        logFile = None
         try:
-            if IsUnix:
-                logFile = FileReadBackwards(self._logPath, encoding="latin-1")
-            else:
-                logFile = FileReadBackwards(self._logPath, encoding="latin-1")
+            def reverse_readline(filename, buf_size=8192):
+                with open(filename, 'rb') as f:
+                    f.seek(0, os.SEEK_END)
+                    pos = f.tell()
+                    remainder = b''
+                    while pos > 0:
+                        read_size = min(buf_size, pos)
+                        pos -= read_size
+                        f.seek(pos, os.SEEK_SET)
+                        chunk = f.read(read_size) + remainder
+                        lines = chunk.split(b'\n')
+                        remainder = lines[0]
+                        for line in reversed(lines[1:]):
+                            if line:
+                                yield line.decode('latin-1', errors='replace')
+                    if remainder:
+                        yield remainder.decode('latin-1', errors='replace')
 
-
-            for line in logFile:
+            for line in reverse_readline(self._logPath):
                 line = line[7:]
                 if line.startswith("InitGame"):
                     prestartLines.append(line)
@@ -532,14 +593,17 @@ class RconInterface(AServerInterface):
 
     def Close(self):
         if self.IsOpened():
-            with self._logReaderLock:
-                self._logReaderThreadControl.stop = True
-            self._logReaderThread.join()
-            
-            if hasattr(self, "_qconsolePath") and self._qconsolePath:
-                with self._qconsoleReaderLock:
-                    self._qconsoleReaderThreadControl.stop = True
-                self._qconsoleReaderThread.join()
+            if self._emitterSource:
+                self._emitterSource.Close()
+            else:
+                with self._logReaderLock:
+                    self._logReaderThreadControl.stop = True
+                self._logReaderThread.join()
+                
+                if hasattr(self, "_qconsolePath") and self._qconsolePath:
+                    with self._qconsoleReaderLock:
+                        self._qconsoleReaderThreadControl.stop = True
+                    self._qconsoleReaderThread.join()
                 
             self._rcon.Close()
             self._messageQueueSwap.queue.clear()

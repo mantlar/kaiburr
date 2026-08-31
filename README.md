@@ -4,7 +4,7 @@
 
 ### A modular scripting platform for MBII OpenJK servers
 
-[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3127/)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3127/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=for-the-badge)](#)
 
@@ -33,7 +33,7 @@
 
 ### Prerequisites
 
-- [**Python 3.12.7+**](https://www.python.org/downloads/release/python-3127/)
+- [**Python 3.11+**](https://www.python.org/downloads/)
 - [**Git**](https://git-scm.com/downloads/) installed on your system
 - A running MBII dedicated server with RCON access
 
@@ -44,12 +44,7 @@ git clone https://github.com/mantlar/kaiburr.git
 cd kaiburr
 ```
 
-Run the prepare script for your platform to install dependencies:
-
-| Platform | Script |
-|----------|--------|
-| Windows | `prepare\win\prepare_win.bat` |
-| Linux / macOS | `prepare/linux_macOS/prepare_linux_macOS.sh` |
+If Git hangs or throws an error about `7z_portable.zip`, run `export GIT_LFS_SKIP_SMUDGE=1` (Linux/macOS) or `$env:GIT_LFS_SKIP_SMUDGE=1` (Windows PowerShell) before cloning.
 
 ### 2. Configure your server.cfg
 
@@ -72,12 +67,20 @@ set logfile          "2"
 
 ### 3. Start Kaiburr
 
-| Platform | Script |
-|----------|--------|
-| Windows | `start\win\start_win.bat` |
-| Linux / macOS | `start/linux_macOS/start_linux_macOS.sh` |
+| Platform | Command |
+|----------|---------|
+| Windows | `kaiburr.bat` |
+| Linux / macOS | `./kaiburr.sh` |
 
-On first run, a `kaiburrCfg.json` will be generated in the root directory. Fill in your server's RCON password, IP, port, and MBII path, then restart.
+On the very first run, Kaiburr will automatically:
+1. Create a virtual environment and install all dependencies.
+2. Launch an interactive **Setup Wizard** to configure your server paths and RCON password.
+3. Start the MBII server (if autostart is enabled) and Kaiburr itself.
+
+On subsequent runs, it skips setup and boots directly.
+
+> [!NOTE]
+> If you installed MBII inside `C:\Program Files (x86)`, you may need to run Kaiburr as Administrator so it can create the virtual environment successfully.
 
 ---
 

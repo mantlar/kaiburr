@@ -488,7 +488,7 @@ class RTV(object):
         }
         
         # State tracking variables
-        self._mapName = None
+        self._mapName = getattr(self._serverData, 'mapName', None)
         self._wantsToRTM = []
         self._rtvCooldown = Timeout()
         self._rtmCooldown = Timeout()
@@ -864,7 +864,7 @@ class RTV(object):
             blacklist = [x[0] for x in self._rtvRecentMaps]
             if self._config.cfg["rtv"]["useSecondaryMaps"] < 2:
                 blacklist.extend([x.GetMapName() for x in self._mapContainer.GetAllMaps() if x.GetPriority() == MapPriorityType.MAPTYPE_SECONDARY])
-            if not self._config.cfg["rtv"]["allowNominateCurrentMap"]:
+            if not self._config.cfg["rtv"]["allowNominateCurrentMap"] and self._mapName:
                 blacklist.append(self._mapName.lower())
 
             # Filter out nominations to prevent duplicates
@@ -1005,14 +1005,14 @@ class RTV(object):
             # Find the map object
             mapObj = self._mapContainer.FindMapWithName(mapToNom)
             
-            # Check each validation condition separately for clearer error reporting
+            currentMap = self._mapName or getattr(self._serverData, 'mapName', None)
             if mapObj == None:
                 failReason = f"map {colors.ColorizeText(mapToNom, self._themeColor)} was not found"
             elif len(self._nominations) >= 5 and not playerHasNomination:
                 failReason = "nomination list full"
             elif mapObj in [x.GetMap() for x in self._nominations]:
                 failReason = f"map {colors.ColorizeText(mapToNom, self._themeColor)} already nominated"
-            elif self._config.cfg["rtv"]["allowNominateCurrentMap"] == False and mapToNom.lower() == self._mapName.lower():
+            elif self._config.cfg["rtv"]["allowNominateCurrentMap"] == False and currentMap and mapToNom.lower() == currentMap.lower():
                 failReason = "server does not allow nomination of current map"
             elif not self._EvaluateMapConditions(mapObj.GetMapName()):
                 failReason = "map conditions are not currently met"
@@ -1259,6 +1259,8 @@ class RTV(object):
 
     def OnServerInit(self, data):
         """Handle server initialization (round start)"""
+        if not self._mapName and getattr(self._serverData, 'mapName', None):
+            self._mapName = self._serverData.mapName
         self._roundTimer += 1
         votesInProgress = self._serverData.GetServerVar("votesInProgress")
         
