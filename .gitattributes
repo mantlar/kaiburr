@@ -24,7 +24,6 @@
 *.RAR filter=lfs diff=lfs merge=lfs -text
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.ZIP filter=lfs diff=lfs merge=lfs -text
-*.7z filter=lfs diff=lfs merge=lfs -text
-*.7Z filter=lfs diff=lfs merge=lfs -text
+
 *.jar filter=lfs diff=lfs merge=lfs -text
 *.JAR filter=lfs diff=lfs merge=lfs -text

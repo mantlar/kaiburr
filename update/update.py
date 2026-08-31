@@ -16,12 +16,7 @@ CFG_FILE_PATH = "commit.cfg"
 UPDATE_CFG_FILE = "updateCfg.json"
 COMMIT_ENV_FILE = "commit.env"
 
-# Directory for extracting 7z files
-EXTRACT_DIR = os.path.abspath(os.path.join("../temp"))
-SEVEN_ZIP_EXECUTABLE = os.path.join(EXTRACT_DIR, '7-ZipPortable', 'App', '7-Zip', '7z.exe')
-SEVEN_ZIP_ARCHIVE = os.path.abspath(os.path.join("../lib/other/win/7z_portable.zip"))
-GIT_ARCHIVE = "PortableGit-2.48.1-64-bit.7z.exe"
-GIT_URL = "https://github.com/git-for-windows/git/releases/download/v2.48.1.windows.1/PortableGit-2.48.1-64-bit.7z.exe"
+
 
 # Get branch name from updateCfg.json (create file with default 'main' if not present)
 def get_branch_name():
@@ -119,58 +114,10 @@ def check_git_installed():
                 os.environ["PATH"] = os.path.dirname(GIT_PATH) + ";" + os.environ["PATH"]
             if install_choice != 'y':
                 OS = platform.system()
-                print(f"You will have to install Git manually on {OS}. Visit: https://git-scm.com/downloads")
-                input("Press Enter to exit...")
-                sys.exit(0)
+            print(f"You will have to install Git manually on {OS}. Visit: https://git-scm.com/downloads")
+            input("Press Enter to exit...")
+            sys.exit(0)
             return False
-
-# Function to download the Git archive (PortableGit)
-def download_git():
-    print("[DOWNLOAD] Downloading PortableGit archive...")
-    response = requests.get(GIT_URL)
-    if response.status_code == 200:
-        git_archive_path = os.path.join(EXTRACT_DIR, GIT_ARCHIVE)
-        with open(git_archive_path, 'wb') as f:
-            f.write(response.content)
-        print(f"[DOWNLOAD] Successfully downloaded {GIT_ARCHIVE}")
-        return git_archive_path
-    else:
-        print(f"[ERROR] Failed to download {GIT_ARCHIVE} from {GIT_URL}")
-        return None
-
-# Function to extract PortableGit using 7-Zip
-def extract_git(git_archive_path):
-    print(f"[EXTRACT] Extracting {git_archive_path} to ../venv/GIT...")
-    extract_dir = os.path.abspath(os.path.join("..", "venv", "GIT"))
-    os.makedirs(extract_dir, exist_ok=True)
-
-    try:
-        subprocess.run([SEVEN_ZIP_EXECUTABLE, "x", git_archive_path, f"-o{extract_dir}", "-aoa"], 
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print("[EXTRACT] Extraction complete.")
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] Failed to extract Git: {e}")
-        return False
-    return True
-
-# Extract 7z Portable
-def extract_7z():
-    print(f"[EXTRACT] Extracting {SEVEN_ZIP_ARCHIVE}...")
-    os.makedirs(EXTRACT_DIR, exist_ok=True)
-    try:
-        with zipfile.ZipFile(SEVEN_ZIP_ARCHIVE, 'r') as zip_ref:
-            zip_ref.extractall(EXTRACT_DIR)
-        print("[EXTRACT] Extraction complete.")
-    except zipfile.BadZipFile:
-        print("[ERROR] The 7z Portable archive appears to be invalid or incomplete.")
-        print("[HINT] If you cloned this repo using Git LFS, make sure Git LFS is installed and run:")
-        print("       git lfs pull")
-        print("       OR download a fresh copy of '7z_portable.zip' from the Releases page.")
-        print("       https://github.com/mantlar/kaiburr/releases")
-        print(" ")
-        remove_temp_files();
-        input("Press Enter to exit...")
-        sys.exit(1)
 
 def start():
     # Prompt user for update
@@ -294,16 +241,10 @@ if __name__ == "__main__":
         sync_repo(commit_hash)
         fetch_deploy()
     else:
-        print("[INFO] Using 7-Zip Portable to extract Git...")
-        extract_7z()
-        git_archive_path = download_git()
-        if git_archive_path:
-            extract_git(git_archive_path)
-
-        clone_repo_if_needed()
-        sync_repo(commit_hash)
-        remove_temp_files()
-        fetch_deploy()
+        print("[ERROR] Git is not installed or not in PATH.")
+        print("[ERROR] Please install Git (https://git-scm.com/downloads) and try again.")
+        input("Press Enter to exit...")
+        sys.exit(1)
 
     print("\n\n[IMPORTANT] IF you encounter errors after updates, check fallback configs internally in kaiburr and all plugins...\n\n")
     input("Press Enter to exit...");

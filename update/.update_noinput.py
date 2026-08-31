@@ -16,12 +16,7 @@ CFG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commit
 COMMIT_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commit.env")
 UPDATE_CFG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "updateCfg.json")
 
-# Directory for extracting 7z files
-EXTRACT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "temp")
-SEVEN_ZIP_EXECUTABLE = os.path.join(EXTRACT_DIR, '7-ZipPortable', 'App', '7-Zip', '7z.exe')
-SEVEN_ZIP_ARCHIVE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../", "lib/other/win/7z_portable.zip")
-GIT_ARCHIVE = "PortableGit-2.48.1-64-bit.7z.exe"
-GIT_URL = "https://github.com/git-for-windows/git/releases/download/v2.48.1.windows.1/PortableGit-2.48.1-64-bit.7z.exe"
+
 
 # Get branch name from updateCfg.json (create file with default 'main' if not present)
 def get_branch_name():

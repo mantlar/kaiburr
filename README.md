@@ -44,7 +44,6 @@ git clone https://github.com/mantlar/kaiburr.git
 cd kaiburr
 ```
 
-If Git hangs or throws an error about `7z_portable.zip`, run `export GIT_LFS_SKIP_SMUDGE=1` (Linux/macOS) or `$env:GIT_LFS_SKIP_SMUDGE=1` (Windows PowerShell) before cloning.
 
 ### 2. Configure your server.cfg
 
