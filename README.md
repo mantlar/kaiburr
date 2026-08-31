@@ -316,7 +316,7 @@ Sync your `gamedata/` directory to a remote server via FTP:
 |---|-------|
 | 1 | Python requires double backslashes `\\` in JSON file paths on Windows |
 | 2 | RCON payload limits: **138 bytes** (svsay), **993 bytes** (vstr), **2048 bytes** (general). Rate: ~5 messages per 20ms. Exceeding this blocks the calling thread until the next frame. |
-| 3 | Windows users without native Git may need to manually download [`7z_portable.zip`](https://github.com/mantlar/kaiburr/blob/main/lib/other/win/7z_portable.zip) into `./lib/other/win` for the update system. UNIX users should [install Git](https://git-scm.com/downloads/) before using Kaiburr. |
+| 3 | Kaiburr requires [Git](https://git-scm.com/downloads/) to be installed and available in your system's PATH. |
 
 ---
 
