@@ -57,7 +57,7 @@ def check_msvc():
         installer_path = "vc_redist.x86.exe"
         url = "https://download.microsoft.com/download/2/e/6/2e61cfa4-993b-4dd4-91da-3737cd5cd6e3/vcredist_x86.exe"
         urllib.request.urlretrieve(url, installer_path)
-        subprocess.run([installer_path, "/install", "/norestart"], check=True)
+        subprocess.run([installer_path, "/install", "/quiet", "/norestart"], check=True)
         if os.path.exists(installer_path):
             os.remove(installer_path)
         print("[OK] MSVC Redistributable installed.")
