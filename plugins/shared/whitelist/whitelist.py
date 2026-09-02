@@ -13,7 +13,7 @@ import json
 
 SERVER_DATA = None
 
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "whitelistCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "whitelistCfg.yaml")
 
 CONFIG_FALLBACK = \
 """{
@@ -30,7 +30,7 @@ CONFIG_FALLBACK = \
 }
 """
 global WhitelistConfig
-WhitelistConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+WhitelistConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 # DISCLAIMER : DO NOT LOCK ANY OF THESE FUNCTIONS, IF YOU WANT MAKE INTERNAL LOOPS FOR PLUGINS - MAKE OWN THREADS AND MANAGE THEM, LET THESE FUNCTIONS GO.
 

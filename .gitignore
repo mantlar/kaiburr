@@ -15,6 +15,7 @@ update/key/*
 *.code-workspace
 
 *.json
+*.yaml
 *.cfg
 *.env
 *.pyc
@@ -36,6 +37,7 @@ gtConfig.json
 *.DB
 ignored/*
 venv/*
+mbiiez-main/
 
 # Plugin-specific files containing IPs
 plugins/shared/votekick/protectedIPs.txt
@@ -50,3 +52,19 @@ aishit.md
 test_unicode_name.py
 test.py
 *.zip
+
+# New Untracked Files/Dirs
+data/archive/
+docs/README_old.md
+mb2_campaign_notes.txt
+patch_igbc2.py
+plugins/shared/RTV/rtvConfigOld.yaml
+plugins/shared/debug/
+plugins/shared/ghost_yoda/test_ghost_yoda.py
+plugins/shared/ghost_yoda/token.txt
+plugins/shared/ollamabot/player_chat_pool.txt
+pyrefly.toml
+scratch/
+test.bat
+tests/
+tools/

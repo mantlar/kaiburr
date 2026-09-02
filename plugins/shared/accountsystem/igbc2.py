@@ -27,8 +27,8 @@ Log = logging.getLogger(__name__)
 SERVER_DATA = None
 
 # Configuration file paths and defaults
-DEFAULT_CFG_PATH = os.path.join(os.path.dirname(__file__), "bankingConfig.json")
-DEFAULT_CFG = config.Config.fromJSON(DEFAULT_CFG_PATH)
+DEFAULT_CFG_PATH = os.path.join(os.path.dirname(__file__), "bankingConfig.yaml")
+DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_PATH)
 
 # Fallback configuration if config file doesn't exist
 CONFIG_FALLBACK = \
@@ -306,7 +306,7 @@ class BankingPlugin:
         # START OF MODIFIED CODE FOR CONFIG LOADING
         # Check if config loading failed and use fallback data
         if DEFAULT_CFG is None or DEFAULT_CFG.cfg.get("MBIIPath") in [None, "your/mbii/path/here"]:
-            Log.error("MBIIPath is not configured in bankingConfig.json. The GetAllTeams function will not work.")
+            Log.error("MBIIPath is not configured in bankingConfig.yaml. The GetAllTeams function will not work.")
         if DEFAULT_CFG is None:
             Log.warning("Default config failed to load from file. Using fallback configuration.")
             # Create a minimal mock config object to prevent AttributeError: 'NoneType' object has no attribute 'cfg'
@@ -377,7 +377,7 @@ class BankingPlugin:
             ("modifycredits", "modcredits") : ("!modifycredits <playerid> <amount> - modify a player's credits by the specified amount", self._handle_mod_credits),
             ("resetbounties", "rb") : ("!resetbounties - clears the bounty list", self._handle_reset_bounties),
             ("teamcredits", "tcredits") : ("!teamcredits <team> <amount> - add credits to all players on a team (1=red, 2=blue, 3=spec)", self._handle_team_credits),
-            ("reloadextralives", "relives") : ("!reloadextralives - reload extralives.json table", self._handle_reload_extralives),
+            ("reloadextralives", "relives") : ("!reloadextralives - reload extralives.yaml table", self._handle_reload_extralives),
         }
         # Register commands with server
         newVal = []
@@ -1182,7 +1182,7 @@ class BankingPlugin:
         return False
 
     def _handle_reload_extralives(self, playerName, smodId, adminIP, cmdArgs):
-        """SMOD command to reload extralives.json at runtime."""
+        """SMOD command to reload extralives.yaml at runtime."""
         self.server_data.interface.SmSay(self.msg_prefix + "This command is deprecated. Extra lives data is loaded at server startup.")
         return True
 

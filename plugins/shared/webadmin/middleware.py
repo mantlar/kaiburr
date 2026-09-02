@@ -16,6 +16,7 @@ SESSION_COOKIE = "webadmin_session"
 # Paths that don't require authentication
 PUBLIC_PATHS = {
     "/api/auth/login",
+    "/api/accounts",
 }
 
 # Paths that are served as static files (no auth needed)

@@ -42,7 +42,7 @@ _web_runner = None
 _shutdown_event = threading.Event()
 
 # Config
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "webadminConfig.json")
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "webadminConfig.yaml")
 CONFIG_DEFAULTS = {
     "port": 8080,
     "host": "127.0.0.1",

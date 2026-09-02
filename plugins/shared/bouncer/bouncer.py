@@ -2,7 +2,7 @@
 Bouncer Plugin - New IP Gate System
 
 Tracks IP addresses of players joining the server.
-- Known IPs (in ipList.json) pass through without punishment
+- Known IPs (in ipList.yaml) pass through without punishment
 - New/unknown IPs receive configurable punishments (marktk, mute, or both)
 
 Actions:
@@ -33,9 +33,9 @@ import lib.shared.colors as colors
 SERVER_DATA = None
 Log = logging.getLogger(__name__)
 
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "bouncerCfg.json")
-IP_LIST_PATH = os.path.join(os.path.dirname(__file__), "ipList.json")
-ANTIPADAWAN_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "antipadawan", "antipadawanCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "bouncerCfg.yaml")
+IP_LIST_PATH = os.path.join(os.path.dirname(__file__), "ipList.yaml")
+ANTIPADAWAN_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "antipadawan", "antipadawanCfg.yaml")
 
 CONFIG_FALLBACK = """{
     "enabled": true,
@@ -47,7 +47,7 @@ CONFIG_FALLBACK = """{
     "privateMessage": "This is a one-time authentication and will not occur again."
 }"""
 
-BouncerConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+BouncerConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 PluginInstance = None
 
@@ -133,7 +133,7 @@ class BouncerPlugin:
             return False
 
     def _LoadIpList(self) -> dict:
-        """Load IP list from ipList.json"""
+        """Load IP list from ipList.yaml"""
         try:
             if os.path.exists(IP_LIST_PATH):
                 with open(IP_LIST_PATH, 'r', encoding='utf-8') as f:
@@ -143,7 +143,7 @@ class BouncerPlugin:
         return {}
 
     def _SaveIpList(self):
-        """Save IP list to ipList.json"""
+        """Save IP list to ipList.yaml"""
         try:
             with open(IP_LIST_PATH, 'w', encoding='utf-8') as f:
                 json.dump(self._ipList, f, indent=4)

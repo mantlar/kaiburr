@@ -26,7 +26,7 @@ bot_loop = None
 shutdown_event = threading.Event()
 log_watcher_task = None
 
-SYNC_CODES_FILE = os.path.join(os.path.dirname(__file__), "sync_codes.json")
+SYNC_CODES_FILE = os.path.join(os.path.dirname(__file__), "sync_codes.yaml")
 SYNC_CODES = {} # code -> discord_id
 
 def load_sync_codes():

@@ -85,7 +85,7 @@ class EloPlugin:
             ("resetrating", "resetelo"): ("Reset player's rating", self._handle_reset_rating),
             ("setrating", "setelo"): ("Set player's rating", self._handle_set_rating),
             ("eloinfo",): ("Show Elo system information", self._handle_elo_info),
-            ("reloadextralives", "relives"): ("Reload extralives.json table", self._handle_reload_extralives),
+            ("reloadextralives", "relives"): ("Reload extralives.yaml table", self._handle_reload_extralives),
         }
         # Register commands with server
         newVal = []
@@ -610,7 +610,7 @@ class EloPlugin:
         return True
 
     def _handle_reload_extralives(self, player_name: str, smod_id: int, admin_ip: str, args: list[str]) -> bool:
-        """SMOD command to reload extralives.json at runtime"""
+        """SMOD command to reload extralives.yaml at runtime"""
         try:
             self._load_extralives_map()
             self.server_data.interface.SmSay(self.msg_prefix + f"Reloaded extralives table ({len(self.extralives_map)} entries)")
@@ -631,18 +631,18 @@ class EloPlugin:
 
     # ==== Extra lives integration ====
     def _extralives_path(self) -> str:
-        """Get path to extralives.json file"""
-        # repo_root/plugins/shared/elo/elo.py -> repo_root/data/extralives.json
+        """Get path to extralives.yaml file"""
+        # repo_root/plugins/shared/elo/elo.py -> repo_root/data/extralives.yaml
         here = os.path.dirname(__file__)
         repo_root = os.path.abspath(os.path.join(here, "..", "..", ".."))
-        return os.path.join(repo_root, "data", "extralives.json")
+        return os.path.join(repo_root, "data", "extralives.yaml")
 
     def _load_extralives_map(self) -> None:
         """Load extralives table from JSON into memory. Keys are plaintext character names."""
         try:
             path = self._extralives_path()
             if not os.path.exists(path):
-                Log.warning(f"extralives.json not found at {path}; rating changes will not be scaled by extra lives")
+                Log.warning(f"extralives.yaml not found at {path}; rating changes will not be scaled by extra lives")
                 self.extralives_map = {}
                 return
             with open(path, "r", encoding="utf-8") as f:
@@ -664,7 +664,7 @@ class EloPlugin:
             self.extralives_map = table
             Log.info(f"Loaded extralives map with {len(self.extralives_map)} entries")
         except Exception as e:
-            Log.error(f"Failed to load extralives.json: {e}")
+            Log.error(f"Failed to load extralives.yaml: {e}")
             self.extralives_map = {}
 
     def get_extralives_for_pid(self, player_id: int) -> int:

@@ -72,7 +72,7 @@ class AntiAFKPlugin:
         """Load configuration from JSON file or create default"""
         config_path = os.path.join(
             os.path.dirname(__file__),
-            "antiafk_config.json"
+            "antiafk_config.yaml"
         )
         
         if os.path.exists(config_path):

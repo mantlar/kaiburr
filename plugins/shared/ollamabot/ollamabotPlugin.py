@@ -17,7 +17,7 @@ PluginInstance = None
 class OllamabotPlugin:
     def __init__(self, serverData: serverdata.ServerData):
         self._serverData = serverData
-        self.config_path = os.path.join(os.path.dirname(__file__), "ollamabotCfg.json")
+        self.config_path = os.path.join(os.path.dirname(__file__), "ollamabotCfg.yaml")
         self.chat_pool_path = os.path.join(os.path.dirname(__file__), "player_chat_pool.txt")
         self.config = {
             "model": "llama3",
@@ -44,7 +44,7 @@ class OllamabotPlugin:
                     data = json.load(f)
                     self.config.update(data)
             except Exception as e:
-                Log.error(f"Failed to load ollamabotCfg.json: {e}")
+                Log.error(f"Failed to load ollamabotCfg.yaml: {e}")
         else:
             self.SaveConfig()
 
@@ -53,7 +53,7 @@ class OllamabotPlugin:
             with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4)
         except Exception as e:
-            Log.error(f"Failed to save ollamabotCfg.json: {e}")
+            Log.error(f"Failed to save ollamabotCfg.yaml: {e}")
 
     def LoadChatPool(self):
         default_pool = [

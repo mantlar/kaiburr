@@ -248,6 +248,32 @@ def broadcast_event(event_dict):
             pass  # Client is backed up, skip
 
 
+
+def resolve_target_details(player_id):
+    details = {}
+    try:
+        player_id_int = int(player_id)
+        # Attempt to get player name
+        client = SERVER_DATA.API.GetClientById(player_id_int)
+        if client:
+            details["player_name"] = client.GetName()
+            # Attempt to get account ID
+            account_plugin = SERVER_DATA.API.GetPlugin("plugins.shared.accountsystem.accountsystem")
+            if account_plugin:
+                get_account = account_plugin._exports.Get("GetAccountByPlayerID").pointer
+                account = get_account(player_id_int)
+                if account and not account.is_dummy_account():
+                    details["account_id"] = account.user_id
+        else:
+            # Fallback to scanning player list if GetClientById fails or returns None
+            for p in _get_player_list():
+                if p["id"] == player_id_int:
+                    details["player_name"] = p["name"]
+                    break
+    except Exception as e:
+        Log.error(f"Error resolving target details for {player_id}: {e}")
+    return details
+
 # ============================================================
 # Player Action Routes
 # ============================================================
@@ -273,7 +299,9 @@ async def handle_kick(request):
             break
 
     SERVER_DATA.interface.ClientKick(player_id)
-    db.log_action(user["id"], "kick", player_name, {"player_id": player_id, "reason": reason}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"player_id": player_id, "reason": reason})
+    db.log_action(user["id"], "kick", target_details.get("player_name", str(player_id)), target_details, ip)
     Log.info(f"WebAdmin: {user['username']} kicked {player_name} (ID:{player_id})")
 
     return web.json_response({"ok": True, "action": "kick", "target": player_name})
@@ -299,7 +327,9 @@ async def handle_mute(request):
             break
 
     SERVER_DATA.interface.ClientMute(player_id, minutes)
-    db.log_action(user["id"], "mute", player_name, {"player_id": player_id, "minutes": minutes}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"player_id": player_id, "minutes": minutes})
+    db.log_action(user["id"], "mute", target_details.get("player_name", str(player_id)), target_details, ip)
     Log.info(f"WebAdmin: {user['username']} muted {player_name} for {minutes}m")
 
     return web.json_response({"ok": True, "action": "mute", "target": player_name, "minutes": minutes})
@@ -319,7 +349,9 @@ async def handle_unmute(request):
             break
 
     SERVER_DATA.interface.ClientUnmute(player_id)
-    db.log_action(user["id"], "unmute", player_name, {"player_id": player_id}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"player_id": player_id})
+    db.log_action(user["id"], "unmute", target_details.get("player_name", str(player_id)), target_details, ip)
     Log.info(f"WebAdmin: {user['username']} unmuted {player_name}")
 
     return web.json_response({"ok": True, "action": "unmute", "target": player_name})
@@ -485,7 +517,9 @@ async def handle_tempban(request):
             break
 
     SERVER_DATA.interface.Tempban(player_name, rounds)
-    db.log_action(user["id"], "tempban", player_name, {"player_id": player_id, "rounds": rounds}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"player_id": player_id, "rounds": rounds})
+    db.log_action(user["id"], "tempban", target_details.get("player_name", str(player_id)), target_details, ip)
     Log.info(f"WebAdmin: {user['username']} tempbanned {player_name} for {rounds} rounds")
     return web.json_response({"ok": True, "action": "tempban", "target": player_name, "rounds": rounds})
 
@@ -500,7 +534,9 @@ async def handle_forceteam(request):
         data = {}
     team = data.get("team", "s")
     SERVER_DATA.interface.ForceTeam(player_id, team)
-    db.log_action(user["id"], "forceteam", str(player_id), {"team": team}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"team": team})
+    db.log_action(user["id"], "forceteam", target_details.get("player_name", str(player_id)), target_details, ip)
     return web.json_response({"ok": True, "action": "forceteam", "target": player_id, "team": team})
 
 @require_smod_level(2)
@@ -514,7 +550,9 @@ async def handle_settk(request):
         data = {}
     points = int(data.get("points", 0))
     SERVER_DATA.interface.SetTK(player_id, points)
-    db.log_action(user["id"], "settk", str(player_id), {"points": points}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"points": points})
+    db.log_action(user["id"], "settk", target_details.get("player_name", str(player_id)), target_details, ip)
     return web.json_response({"ok": True, "action": "settk", "target": player_id, "points": points})
 
 @require_smod_level(2)
@@ -528,7 +566,9 @@ async def handle_marktk(request):
         data = {}
     minutes = int(data.get("minutes", 10))
     SERVER_DATA.interface.MarkTK(player_id, minutes)
-    db.log_action(user["id"], "marktk", str(player_id), {"minutes": minutes}, ip)
+    target_details = resolve_target_details(player_id)
+    target_details.update({"minutes": minutes})
+    db.log_action(user["id"], "marktk", target_details.get("player_name", str(player_id)), target_details, ip)
     return web.json_response({"ok": True, "action": "marktk", "target": player_id, "minutes": minutes})
 
 @require_smod_level(2)
@@ -537,7 +577,8 @@ async def handle_unmarktk(request):
     user = request["user"]
     ip = get_client_ip(request)
     SERVER_DATA.interface.UnmarkTK(player_id)
-    db.log_action(user["id"], "unmarktk", str(player_id), {}, ip)
+    target_details = resolve_target_details(player_id)
+    db.log_action(user["id"], "unmarktk", target_details.get("player_name", str(player_id)), target_details, ip)
     return web.json_response({"ok": True, "action": "unmarktk", "target": player_id})
 
 @require_smod_level(3)
@@ -808,6 +849,10 @@ def setup_routes(app):
     app.router.add_get("/api/admin/users", handle_list_users)
     app.router.add_post("/api/admin/users", handle_create_user)
 
+    # Account Viewer
+    app.router.add_get("/api/accounts", handle_search_accounts)
+    app.router.add_get("/api/accounts/{id}", handle_get_account)
+
     # Static files — serve index.html for root, and everything under /static/
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     app.router.add_static("/static", static_dir)
@@ -821,3 +866,120 @@ def setup_routes(app):
 
 
 import os
+
+
+# ============================================================
+# Account Viewer Routes
+# ============================================================
+
+async def handle_search_accounts(request):
+    try:
+        q = request.query.get("q", "").strip()
+        
+        account_plugin = SERVER_DATA.API.GetPlugin("plugins.shared.accountsystem.accountsystem")
+        if not account_plugin:
+            return web.json_response({"error": "Account system offline"}, status=503)
+            
+        export_inst = account_plugin._exports.Get("GetDatabaseConnection")
+        if not export_inst:
+            return web.json_response({"error": "GetDatabaseConnection export not found"}, status=500)
+            
+        get_db_conn_func = export_inst.pointer
+        db_conn = get_db_conn_func()
+        if not db_conn:
+            return web.json_response({"error": "db_conn is None"}, status=500)
+            
+        if not q:
+            query = "SELECT user_id, player_name, last_login FROM user_credentials ORDER BY last_login DESC LIMIT 50"
+        else:
+            q_clean = q.replace("'", "''")
+            query = f"SELECT user_id, player_name, last_login FROM user_credentials WHERE player_name LIKE '%{q_clean}%' OR user_id = '{q_clean}' ORDER BY last_login DESC LIMIT 50"
+            
+        rows = db_conn.ExecuteQuery(query, withResponse=True) or []
+        
+        results = []
+        for r in rows:
+            results.append({
+                "user_id": r[0],
+                "player_name": r[1],
+                "last_login": r[2]
+            })
+            
+        return web.json_response({"accounts": results})
+    except Exception as e:
+        import traceback
+        return web.json_response({"error": str(e), "trace": traceback.format_exc()}, status=500)
+
+async def handle_get_account(request):
+    """GET /api/accounts/{id}"""
+    try:
+        try:
+            user_id = int(request.match_info["id"])
+        except ValueError:
+            return web.json_response({"error": "Invalid user ID"}, status=400)
+            
+        account_plugin = SERVER_DATA.API.GetPlugin("plugins.shared.accountsystem.accountsystem")
+        if not account_plugin:
+            return web.json_response({"error": "Account system offline"}, status=503)
+            
+        export_inst = account_plugin._exports.Get("GetDatabaseConnection")
+        if not export_inst:
+            return web.json_response({"error": "GetDatabaseConnection export not found"}, status=500)
+            
+        get_db_conn_func = export_inst.pointer
+        db_conn = get_db_conn_func()
+        if not db_conn:
+            return web.json_response({"error": "db_conn is None"}, status=500)
+        
+        # user_credentials: 0:id, 1:name, 2:ip, 3:last_ip, 4:totp, 5:created_at, 6:last_login, 7:discord_id
+        cred_rows = db_conn.ExecuteQuery(f"SELECT user_id, player_name, created_at, last_login, discord_id FROM user_credentials WHERE user_id = {user_id}", withResponse=True)
+        if not cred_rows or len(cred_rows) == 0:
+            return web.json_response({"error": "Account not found"}, status=404)
+            
+        c = cred_rows[0]
+        account_data = {
+            "user_id": c[0],
+            "player_name": c[1],
+            "created_at": c[2],
+            "last_login": c[3],
+            "discord_id": c[4]
+        }
+        
+        # banking: 0:id, 1:credits
+        bank_rows = db_conn.ExecuteQuery(f"SELECT credits FROM banking WHERE user_id = {user_id}", withResponse=True)
+        account_data["credits"] = bank_rows[0][0] if bank_rows else 0
+        
+        # experience: 0:id, 1:exp, 2:level
+        exp_rows = db_conn.ExecuteQuery(f"SELECT exp, level FROM experience WHERE user_id = {user_id}", withResponse=True)
+        if exp_rows:
+            account_data["exp"] = exp_rows[0][0]
+            account_data["level"] = exp_rows[0][1]
+        else:
+            account_data["exp"] = 0
+            account_data["level"] = 0
+            
+        # elo_ratings: 0:id, 1:rating, 2:games, 3:kills, 4:deaths, 5:high, 6:low, 7:changes, 8:last
+        elo_rows = db_conn.ExecuteQuery(f"SELECT rating, games_played, kills, deaths, highest_rating FROM elo_ratings WHERE user_id = {user_id}", withResponse=True)
+        if elo_rows:
+            e = elo_rows[0]
+            account_data["elo_rating"] = e[0]
+            account_data["games_played"] = e[1]
+            account_data["kills"] = e[2]
+            account_data["deaths"] = e[3]
+            account_data["highest_rating"] = e[4]
+            if e[3] > 0:
+                account_data["kd_ratio"] = round(e[2] / e[3], 2)
+            else:
+                account_data["kd_ratio"] = e[2]
+        else:
+            account_data["elo_rating"] = 1200
+            account_data["games_played"] = 0
+            account_data["kills"] = 0
+            account_data["deaths"] = 0
+            account_data["highest_rating"] = 1200
+            account_data["kd_ratio"] = 0
+            
+        return web.json_response(account_data)
+    except Exception as e:
+        import traceback
+        return web.json_response({"error": str(e), "trace": traceback.format_exc()}, status=500)

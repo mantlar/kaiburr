@@ -1,13 +1,13 @@
 import os
 import sys
 import subprocess
-import json
+import yaml
 import time
 import urllib.request
 import winreg
 
 KAIBURR_ROOT = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(KAIBURR_ROOT, "kaiburrCfg.json")
+CONFIG_PATH = os.path.join(KAIBURR_ROOT, "kaiburrCfg.yaml")
 
 def print_header(text):
     print("\n" + "="*50)
@@ -169,6 +169,8 @@ def run_setup_wizard():
                 "Remotes": [
                     {
                         "port": port,
+                        "emitterEnabled": False,
+                        "emitterPort": 29071,
                         "logFilename": "server.log",
                         "qconsoleFilename": "qconsole.log",
                         "password": password
@@ -190,10 +192,10 @@ def run_setup_wizard():
         ]
     }
     
-    with open(CONFIG_PATH, 'w') as f:
-        json.dump(config, f, indent=4)
-        
-    print("\n[OK] Configuration saved to kaiburrCfg.json!")
+    with open(CONFIG_PATH, "w") as f:
+        yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
+
+    print("\n[OK] Configuration saved to kaiburrCfg.yaml!")
 
 def autostart_server(config):
     if not config.get("watchdog", {}).get("enabled", False):
@@ -263,18 +265,24 @@ def autostart_server(config):
     time.sleep(3)
 
 def main():
-    if not os.path.exists(CONFIG_PATH):
-        setup_environment()
-        run_setup_wizard()
+    config_file = CONFIG_PATH
+    if not os.path.exists(config_file):
+        legacy_config = os.path.join(KAIBURR_ROOT, "kaiburrCfg.json")
+        if os.path.exists(legacy_config):
+            config_file = legacy_config
+        else:
+            setup_environment()
+            run_setup_wizard()
+            config_file = CONFIG_PATH
         
-    with open(CONFIG_PATH, 'r') as f:
-        config = json.load(f)
+    with open(config_file, 'r') as f:
+        config = yaml.safe_load(f)
         
     autostart_server(config)
     
     print_header("Starting Kaiburr")
     try:
-        subprocess.run([sys.executable, "kaiburr.py"], check=True, cwd=KAIBURR_ROOT)
+        subprocess.run([sys.executable, "kaiburr.py"] + sys.argv[1:], check=True, cwd=KAIBURR_ROOT)
     except KeyboardInterrupt:
         print("\n[OK] Exiting Kaiburr.")
     except subprocess.CalledProcessError as e:

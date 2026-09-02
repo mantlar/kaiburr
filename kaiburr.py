@@ -3,6 +3,7 @@ import os
 import re
 import time
 import json
+import yaml
 import threading
 import traceback
 import io
@@ -76,77 +77,49 @@ import lib.shared.observer as observer
 INVALID_ID = -1
 USERINFO_LEN = len("userinfo: ")
 
-CONFIG_DEFAULT_PATH = os.path.join(os.getcwd(),"kaiburrCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.getcwd(),"kaiburrCfg.yaml")
 CONFIG_LEGACY_PATH = os.path.join(os.getcwd(),"kaiburrCfg.json")
 # Things like port and ip can be omitted in future, since this thing is supposed to be sharing the filesystem with the server, it could read it's config for credentials.
 CONFIG_FALLBACK = \
-"""{
-    "Name":"MBII Kaiburr : Consequential Success",
-    "MBIIPath": "your/path/here/",
-    "logFilename":"server.log",
-    "serverPath":"your/path/here/",
-    "serverFileName":"mbiided.x86.exe",
-    "logicDelay":0.016,
-    "restartOnCrash": false,
-    "watchdog": {
-        "enabled": false,
-        "restartServer": false,
-        "serverStartCommand": ""
-    },
-    "floodProtection": {
-        "enabled": false,
-        "soft": false,
-        "seconds": 1.5
-    },
-
-    "interfaces":
-    {
-        "pty":
-        {
-            "target":"path/to/your/mbiided.exe",
-            "inputDelay":0.001
-        },
-        "rcon":
-        {
-            "ip":"localhost",
-            "bindAddress":"localhost",
-            "logReadDelay":0.1,
-
-            "Remotes": [
-                {
-                    "port":29070,
-                    "logFilename":"server.log",
-                    "qconsoleFilename": "qconsole.log",
-                    "password":"fuckmylife"
-                }
-            ],
-
-            "Debug":
-            {
-                "TestRetrospect":false
-            }
-        }
-    },
-    "interface":"rcon",
-
-
-    "paths":
-    [
-        "./"
-    ],
-
-    "prologueMessage":"Initialized Kaiburr System",
-
-    "epilogueMessage":"Finishing Kaiburr System",
-
-    "Plugins":
-    [
-        {
-            "path":"plugins.shared.test.testPlugin"
-        }
-    ]
-
-}
+"""Name: "MBII Kaiburr : Consequential Success"
+MBIIPath: "your/path/here/"
+logFilename: "server.log"
+serverPath: "your/path/here/"
+serverFileName: "mbiided.x86.exe"
+logicDelay: 0.016
+restartOnCrash: false
+watchdog:
+  enabled: false
+  restartServer: false
+  serverStartCommand: ""
+floodProtection:
+  enabled: false
+  soft: false
+  seconds: 1.5
+interfaces:
+  pty:
+    target: "path/to/your/mbiided.exe"
+    inputDelay: 0.001
+  rcon:
+    ip: "localhost"
+    bindAddress: "localhost"
+    logReadDelay: 0.1
+    Remotes:
+      - port: 29070
+        emitterEnabled: false
+        emitterPort: 29071
+        logFilename: "server.log"
+        qconsoleFilename: "qconsole.log"
+        password: "fuckmylife"
+    Debug:
+      TestRetrospect: false
+interface: "rcon"
+paths:
+  - "./"
+prologueMessage: "Initialized Kaiburr System"
+epilogueMessage: "Finishing Kaiburr System"
+Plugins:
+  - path: "plugins.shared.test.testPlugin"
 """
 
 
@@ -243,11 +216,15 @@ class MBIIServer:
         if os.path.exists(CONFIG_DEFAULT_PATH):
             self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
         elif os.path.exists(CONFIG_LEGACY_PATH):
-            Log.info("Legacy config kaiburrCfg.json found. Migrating to kaiburrCfg.json...")
+            Log.info("Legacy config kaiburrCfg.json found. Migrating to kaiburrCfg.yaml...")
             try:
-                shutil.copy2(CONFIG_LEGACY_PATH, CONFIG_DEFAULT_PATH)
+                with open(CONFIG_LEGACY_PATH, 'r') as f:
+                    legacy_cfg = json.load(f)
+                with open(CONFIG_DEFAULT_PATH, 'w') as f:
+                    yaml.safe_dump(legacy_cfg, f, default_flow_style=False, sort_keys=False)
+                os.rename(CONFIG_LEGACY_PATH, CONFIG_LEGACY_PATH + ".bak")
             except Exception as e:
-                Log.warning("Failed to copy legacy config: %s", str(e))
+                Log.warning("Failed to migrate legacy config: %s", str(e))
             self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
         else:
             self._config = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
@@ -304,7 +281,8 @@ class MBIIServer:
                 remote_logFilename = remote_cfg.get("logFilename", global_logFilename)
                 remote_qconsoleFilename = remote_cfg.get("qconsoleFilename", global_qconsoleFilename)
                 remote_port = remote_cfg.get("port", 0) # Port is mandatory for Rcon, but use 0 as a safe sentinel
-                emitter_port = remote_cfg.get("emitterPort", 0)
+                emitter_enabled = remote_cfg.get("emitterEnabled", False)
+                emitter_port = remote_cfg.get("emitterPort", 29071) if emitter_enabled else 0
 
                 # NEW: Get password from remote config
                 remote_password = remote_cfg["password"]
@@ -328,7 +306,7 @@ class MBIIServer:
                                                                     emitterPort=emitter_port)
                 self._svInterfaces.append(interface)
                 Log.info(f"Initialized RconInterface #{idx+1} on {remote_ip}:{remote_port} (Bind: {shared_bindAddress}) using " + 
-                         (f"UDP Emitter Port {emitter_port}" if emitter_port > 0 else f"log file {remote_logFilename}"))
+                         (f"UDP Emitter Port {emitter_port}" if emitter_enabled else f"log file {remote_logFilename}"))
 
         if len(self._svInterfaces) == 0:
             Log.error("Server interface(s) were not initialized properly or 'Remotes' list was empty.")
@@ -1842,7 +1820,7 @@ def main():
     else:
         Log.info("Kaiburr initialize error %s" % (MBIIServer.StatusString(int_status)))
 
-    Log.info("The final gunshot was an exclamation mark on everything that had led to this point. I released my finger from the trigger, and it was over.")
+    Log.info("change da world my final message goodbye (kaiburr exit)")
 
 
 if __name__ == "__main__":

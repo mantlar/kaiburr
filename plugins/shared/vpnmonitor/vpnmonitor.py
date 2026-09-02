@@ -12,7 +12,7 @@ import ipaddress;
 
 SERVER_DATA = None;
 
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "vpnmonitorCfg.json");
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "vpnmonitorCfg.yaml");
 
 # To get your API keys go to https://iphub.info/api
 
@@ -44,7 +44,7 @@ CONFIG_FALLBACK = \
 }
 """
 global VPNMonitorConfig;
-VPNMonitorConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+VPNMonitorConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 # DISCLAIMER : DO NOT LOCK ANY OF THESE FUNCTIONS, IF YOU WANT MAKE INTERNAL LOOPS FOR PLUGINS - MAKE OWN THREADS AND MANAGE THEM, LET THESE FUNCTIONS GO.
 
@@ -61,7 +61,7 @@ class VPNMonitor():
         self._messagePrefix = "^9[VPN]^7: "
         if self.config.cfg["apikey"] == "your_api_key":
             self._status -1;
-            Log.error("Please specify valid api key in vpnmonitorCfg.json");
+            Log.error("Please specify valid api key in vpnmonitorCfg.yaml");
         
         self._database : database.ADatabase = None;
         dbPath = os.path.join(os.path.dirname(__file__), "vpn.db");

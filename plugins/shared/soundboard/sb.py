@@ -18,7 +18,7 @@ Log = logging.getLogger(__name__);
 ## Ensure file extension is included #
 
 PLACEHOLDER = "placeholder"
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "sbConfig.json");
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "sbConfig.yaml");
 PYTHON_CMD = sys.executable
 
 class soundBoardPlugin(object):
@@ -54,7 +54,7 @@ def SV_LoadJson():
         CONFIG = json.load(file)
 
     if any(PLACEHOLDER in str(value) for value in CONFIG.values()):
-        Log.error(f"Placeholder values found in {CONFIG_FILE}, please fill out sbConfig.json and return...")
+        Log.error(f"Placeholder values found in {CONFIG_FILE}, please fill out sbConfig.yaml and return...")
         sys.exit(0)
 
     PLAYERJOIN_SOUND_PATH = CONFIG["PLAYERJOIN_SOUND_PATH"]

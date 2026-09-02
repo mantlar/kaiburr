@@ -17,7 +17,7 @@ ACCOUNTS_XPRTS = None
 DB = None
 
 # Configuration file paths and defaults
-DEFAULT_CFG_PATH = os.path.join(os.path.dirname(__file__), "levelConfig.json")
+DEFAULT_CFG_PATH = os.path.join(os.path.dirname(__file__), "levelConfig.yaml")
 
 # Fallback configuration
 CONFIG_FALLBACK = {

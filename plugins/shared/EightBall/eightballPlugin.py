@@ -18,7 +18,7 @@ Log = logging.getLogger(__name__)
 SERVER_DATA = None
 
 # Configuration file paths and defaults
-DEFAULT_CFG_JSON = os.path.join(os.path.dirname(__file__), "eightballConfig.json")
+DEFAULT_CFG_JSON = os.path.join(os.path.dirname(__file__), "eightballConfig.yaml")
 DEFAULT_CFG = None
 
 CONFIG_FALLBACK = '''{

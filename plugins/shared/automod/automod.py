@@ -37,12 +37,12 @@ class AutomodPlugin:
             tuple(["kickoffenders"]): ("!kickoffenders - Kick all players with violations this session", self.HandleKickOffenders),
             tuple(["tempbanoffenders"]): ("!tempbanoffenders <rounds> - Tempban all offenders for N rounds", self.HandleTempbanOffenders),
             tuple(["amstat", "automodstatus"]): ("!<amstat | automodstatus> - Show automod statistics", self.HandleStatus),
-            tuple(["clearmodlog"]): ("!clearmodlog - Clear all violation history from punishedPlayers.json", self.HandleClearLog)
+            tuple(["clearmodlog"]): ("!clearmodlog - Clear all violation history from punishedPlayers.yaml", self.HandleClearLog)
         }
 
     def _LoadConfig(self) -> dict:
-        """Load configuration from automodCfg.json, creating it with defaults if missing"""
-        config_path = os.path.join(os.path.dirname(__file__), "automodCfg.json")
+        """Load configuration from automodCfg.yaml, creating it with defaults if missing"""
+        config_path = os.path.join(os.path.dirname(__file__), "automodCfg.yaml")
         default_config = {
             "enabled": True,
             "prohibitedWords": ["badword"],
@@ -125,8 +125,8 @@ class AutomodPlugin:
             return []
 
     def _LoadViolationLog(self) -> dict:
-        """Load violation log from punishedPlayers.json"""
-        log_path = os.path.join(os.path.dirname(__file__), "punishedPlayers.json")
+        """Load violation log from punishedPlayers.yaml"""
+        log_path = os.path.join(os.path.dirname(__file__), "punishedPlayers.yaml")
         try:
             if os.path.exists(log_path):
                 with open(log_path, 'r') as f:
@@ -136,8 +136,8 @@ class AutomodPlugin:
         return {}
 
     def _SaveViolationLog(self):
-        """Save violation log to punishedPlayers.json"""
-        log_path = os.path.join(os.path.dirname(__file__), "punishedPlayers.json")
+        """Save violation log to punishedPlayers.yaml"""
+        log_path = os.path.join(os.path.dirname(__file__), "punishedPlayers.yaml")
         try:
             with open(log_path, 'w') as f:
                 json.dump(self._violation_log, f, indent=4)

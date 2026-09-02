@@ -40,7 +40,7 @@ class DatabaseLite(ADatabase):
     def Open(self) -> bool:
         if self.IsOpened():
             self.Close()
-        self._connection = sqlite3.connect(self._path)
+        self._connection = sqlite3.connect(self._path, check_same_thread=False)
         if self.IsOpened():
             return True
         else:

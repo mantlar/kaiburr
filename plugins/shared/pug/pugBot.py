@@ -674,10 +674,10 @@ async def queue_server_empty(content):
 
 async def shutdown_bot():
         await bot.close()
-
 def check_if_gittracker_used():
+    import yaml
     base_dir = os.path.join(os.path.dirname(__file__))
-    cfg_path = os.path.normpath(os.path.join(base_dir, '..', '..', '..', 'kaiburrCfg.json'))
+    cfg_path = os.path.normpath(os.path.join(base_dir, '..', '..', '..', 'kaiburrCfg.yaml'))
 
     Log.info(f"Checking for 'gittracker' in config file: {cfg_path}")
 
@@ -687,25 +687,22 @@ def check_if_gittracker_used():
 
     try:
         with open(cfg_path, 'r') as f:
-            config_data = json.load(f)
+            config_data = yaml.safe_load(f)
 
-        if "Plugins" in config_data and isinstance(config_data["Plugins"], list):
+        if config_data and "Plugins" in config_data and isinstance(config_data["Plugins"], list):
             for plugin_entry in config_data["Plugins"]:
                 if isinstance(plugin_entry, dict) and "path" in plugin_entry:
                     if "gittracker" in plugin_entry["path"]:
-                        Log.info("'gittracker' found in a plugin path within kaiburrCfg.json.")
+                        Log.info("'gittracker' found in a plugin path within kaiburrCfg.yaml.")
                         return True
-            Log.info("'gittracker' not found in any plugin path within kaiburrCfg.json.")
+            Log.info("'gittracker' not found in any plugin path within kaiburrCfg.yaml.")
             return False
         else:
-            Log.warning("No 'Plugins' list found or 'Plugins' is not a list in kaiburrCfg.json.")
+            Log.warning("No 'Plugins' list found or 'Plugins' is not a list in kaiburrCfg.yaml.")
             return False
 
-    except json.JSONDecodeError as e:
-        Log.error(f"Error decoding kaiburrCfg.json at {cfg_path}: {e}", exc_info=True)
-        return False
     except Exception as e:
-        Log.error(f"An unexpected error occurred while reading kaiburrCfg.json at {cfg_path}: {e}", exc_info=True)
+        Log.error(f"An unexpected error occurred while reading kaiburrCfg.yaml at {cfg_path}: {e}", exc_info=True)
         return False
 
 def ClearExistingQueue():

@@ -16,7 +16,7 @@ import lib.shared.colors as colors
 SERVER_DATA = None;
 PluginInstance = None;
 AUTOMARKTK_DURATION = 60 # minutes
-IP_LIST_FILE = "automarktk_ips.json"
+IP_LIST_FILE = "automarktk_ips.yaml"
 
 Log = logging.getLogger(__name__);
 

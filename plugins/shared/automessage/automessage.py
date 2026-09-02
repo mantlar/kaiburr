@@ -13,7 +13,7 @@ import lib.shared.teams as teams;
 
 SERVER_DATA = None;
 
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "automessageCfg.json");
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "automessageCfg.yaml");
 CONFIG_FALLBACK = \
 """{
     "prefix":"^5[AutoMessage] ^7",
@@ -29,7 +29,7 @@ CONFIG_FALLBACK = \
 }
 """
 global AutomessageConfig;
-AutomessageConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+AutomessageConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 # DISCLAIMER : DO NOT LOCK ANY OF THESE FUNCTIONS, IF YOU WANT MAKE INTERNAL LOOPS FOR PLUGINS - MAKE OWN THREADS AND MANAGE THEM, LET THESE FUNCTIONS GO.
 
@@ -75,7 +75,7 @@ class Automessage():
             
         messages = self.config.cfg['messages']
         if len(messages) == 0:
-            message = "Error: No messages configured in automessageCfg.json"
+            message = "Error: No messages configured in automessageCfg.yaml"
         elif len(messages) == 1:
             message = messages[0]
         else:

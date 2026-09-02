@@ -20,7 +20,7 @@ SERVER_DATA = None;
 KAIBURR = "kaiburr"
 Log = logging.getLogger(__name__);
 
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "gtConfig.json");
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "gtConfig.yaml");
 PLACEHOLDER = "placeholder"
 PLACEHOLDER_PATH = "path/to/bat/or/sh"
 PLACEHOLDER_REPO = "placeholder/placeholder"
@@ -325,7 +325,7 @@ def load_config():
         if (repo["repository"] == PLACEHOLDER_REPO or
             repo["branch"] == PLACEHOLDER_BRANCH or
             repo["token"] == PLACEHOLDER_TOKEN):
-            print("\nPlaceholders detected in gtConfig.json. Please update the file.")
+            print("\nPlaceholders detected in gtConfig.yaml. Please update the file.")
             sys.exit(0)
 
     return {
@@ -466,7 +466,7 @@ def monitor_commits():
         isGFBuilding = config["isGFBuilding"]
     
     if not repositories:
-        print("No repositories found in gtConfig.json.")
+        print("No repositories found in gtConfig.yaml.")
         return
     
     try:

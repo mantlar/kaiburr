@@ -146,6 +146,22 @@ class YamlConfig(Config):
         if yaml == None:
             Log.error("PyYAML is not installed, cannot load YAML config.");
             return None;
+            
+        # Automatic Migration: If YAML doesn't exist, check for JSON
+        if not os.path.exists(yamlPath):
+            jsonPath = yamlPath[:-5] + ".json"
+            if os.path.exists(jsonPath):
+                Log.info(f"Legacy JSON config found: {jsonPath}. Migrating to YAML...")
+                try:
+                    import json
+                    with open(jsonPath, 'r') as f:
+                        legacy_cfg = json.load(f)
+                    with open(yamlPath, 'w') as f:
+                        yaml.safe_dump(legacy_cfg, f, default_flow_style=False, sort_keys=False)
+                    os.rename(jsonPath, jsonPath + ".bak")
+                except Exception as e:
+                    Log.warning(f"Failed to migrate legacy config {jsonPath}: {e}")
+
         try:
             Log.debug(f"Attempting to load config from: {yamlPath}")
             with open(yamlPath) as file:
@@ -162,6 +178,15 @@ class YamlConfig(Config):
             else:
                 Log.info(f"Creating default config file: {yamlPath}")
                 instance = cls.from_string(default);
+                
+                # Auto-convert JSON default strings to YAML for clean output
+                try:
+                    import json
+                    parsed_default = json.loads(default)
+                    default = yaml.safe_dump(parsed_default, default_flow_style=False, sort_keys=False)
+                except:
+                    pass
+
                 f = open(yamlPath, "wt")
                 f.write(default)
                 f.close()

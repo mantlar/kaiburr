@@ -23,6 +23,7 @@ const elPages = {
     chat: document.getElementById('page-chat'),
     commands: document.getElementById('page-commands'),
     audit: document.getElementById('page-audit'),
+    accounts: document.getElementById('page-accounts'),
     settings: document.getElementById('page-settings')
 };
 
@@ -112,6 +113,7 @@ function loadPage(pageId) {
     if (pageId === 'dashboard') loadDashboard();
     else if (pageId === 'players') loadPlayers();
     else if (pageId === 'audit') loadAuditLog();
+    else if (pageId === 'accounts') loadAccounts();
     else if (pageId === 'settings' && currentUser.smod_level >= 3) loadSettings();
 }
 
@@ -670,12 +672,18 @@ async function loadAuditLog() {
         const date = new Date(e.created_at + 'Z'); // SQLite timestamp is UTC
         const timeStr = date.toLocaleString();
         
+        let targetHtml = escapeHtml(e.target || '-');
         let detailsStr = '';
         if (e.details) {
             try {
-                // If it's a dict, format it nicely
                 if (typeof e.details === 'object') {
-                    detailsStr = Object.entries(e.details)
+                    if (e.details.account_id) {
+                        targetHtml = `<a href="#" onclick="viewAccount(${e.details.account_id}); return false;" style="color:var(--accent); text-decoration:underline;">${escapeHtml(e.details.player_name || e.target)} (ID ${e.details.account_id})</a>`;
+                    }
+                    const filteredDetails = { ...e.details };
+                    delete filteredDetails.account_id;
+                    delete filteredDetails.player_name;
+                    detailsStr = Object.entries(filteredDetails)
                         .map(([k, v]) => `<span style="color:var(--text-secondary)">${k}:</span> ${v}`)
                         .join(', ');
                 } else {
@@ -692,7 +700,7 @@ async function loadAuditLog() {
             <td style="font-family:var(--font-mono); color:var(--text-secondary); font-size:0.75rem;">${timeStr}</td>
             <td style="font-weight:500;">${escapeHtml(e.username || 'System')}</td>
             <td style="${actionClass}; font-weight:600;">${escapeHtml(e.action)}</td>
-            <td>${escapeHtml(e.target || '-')}</td>
+            <td>${targetHtml}</td>
             <td style="font-size:0.75rem;">${detailsStr || '-'}</td>
         `;
         tbody.appendChild(tr);
@@ -1150,3 +1158,93 @@ document.getElementById('cmd-removetempban-btn').addEventListener('click', async
     });
     if(res) showToast(`Removed tempban for ${target}`, 'success');
 });
+
+// --- Accounts Viewer ---
+
+document.getElementById('account-search-btn')?.addEventListener('click', () => {
+    const q = document.getElementById('account-search-input').value.trim();
+    loadAccounts(q);
+});
+
+document.getElementById('account-search-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const q = e.target.value.trim();
+        loadAccounts(q);
+    }
+});
+
+async function loadAccounts(query = '') {
+    const data = await apiFetch(`/accounts?q=${encodeURIComponent(query)}`);
+    if (!data) return;
+    
+    const tbody = document.getElementById('accounts-tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (!data.accounts || data.accounts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="table-empty">No accounts found</td></tr>`;
+        return;
+    }
+    
+    data.accounts.forEach(acc => {
+        const tr = document.createElement('tr');
+        
+        const date = acc.last_login ? new Date(acc.last_login + 'Z').toLocaleString() : 'Never';
+        
+        tr.innerHTML = `
+            <td style="font-family:var(--font-mono);">${acc.user_id}</td>
+            <td style="font-weight:500;">${escapeHtml(acc.player_name || '-')}</td>
+            <td style="font-size:0.85rem; color:var(--text-secondary);">${date}</td>
+            <td>
+                <button class="btn btn-sm" onclick="viewAccount(${acc.user_id})">View Details</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.viewAccount = async function(userId) {
+    if (currentPage !== 'accounts') {
+        loadPage('accounts');
+    }
+    
+    const data = await apiFetch(`/accounts/${userId}`);
+    if (!data) return;
+    
+    const createdDate = data.created_at ? new Date(data.created_at + 'Z').toLocaleString() : 'N/A';
+    const lastDate = data.last_login ? new Date(data.last_login + 'Z').toLocaleString() : 'N/A';
+    const kdRatio = data.kd_ratio !== undefined ? data.kd_ratio : 0;
+    
+    const html = `
+        <div style="display:flex; gap: 20px; flex-wrap: wrap;">
+            <div style="flex:1; min-width:200px;">
+                <h4 style="margin-top:0;">Account Info</h4>
+                <p><strong>Name:</strong> ${escapeHtml(data.player_name)}</p>
+                <p><strong>ID:</strong> ${data.user_id}</p>
+                <p><strong>Discord ID:</strong> ${escapeHtml(data.discord_id || 'Not Linked')}</p>
+                <p><strong>Created:</strong> ${createdDate}</p>
+                <p><strong>Last Login:</strong> ${lastDate}</p>
+                <p><strong>Credits:</strong> ${data.credits}</p>
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <h4 style="margin-top:0;">Experience</h4>
+                <p><strong>Level:</strong> ${data.level}</p>
+                <p><strong>EXP:</strong> ${data.exp}</p>
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <h4 style="margin-top:0;">ELO Ratings</h4>
+                <p><strong>Rating:</strong> ${data.elo_rating}</p>
+                <p><strong>Highest Rating:</strong> ${data.highest_rating}</p>
+                <p><strong>Games Played:</strong> ${data.games_played}</p>
+                <p><strong>Kills:</strong> ${data.kills}</p>
+                <p><strong>Deaths:</strong> ${data.deaths}</p>
+                <p><strong>K/D Ratio:</strong> ${kdRatio}</p>
+            </div>
+        </div>
+    `;
+    
+    showModal(`Account Details - ${escapeHtml(data.player_name)}`, html, [
+        { text: 'Close', class: 'btn-ghost', onclick: hideModal }
+    ]);
+};

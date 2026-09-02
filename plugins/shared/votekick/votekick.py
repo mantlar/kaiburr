@@ -33,7 +33,7 @@ from lib.shared.timeout import Timeout
 SERVER_DATA = None
 Log = logging.getLogger(__name__)
 
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "votekickCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "votekickCfg.yaml")
 
 CONFIG_FALLBACK = """{
     "enabled": true,
@@ -48,7 +48,7 @@ CONFIG_FALLBACK = """{
     "protectedIPsFile": ""
 }"""
 
-VotekickConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+VotekickConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 PluginInstance = None
 

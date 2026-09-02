@@ -34,7 +34,7 @@ Log = logging.getLogger(__name__)
 IS_WINDOWS = platform.system() == 'Windows'
 
 # Default configuration
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "autoclientCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "autoclientCfg.yaml")
 CONFIG_FALLBACK = """{
     "enabled": true,
     "maxFakeClients": 8,
@@ -49,7 +49,7 @@ CONFIG_FALLBACK = """{
     "serverProcessName": "mbiided.x86.exe"
 }"""
 
-AutoClientConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+AutoClientConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 SERVER_DATA = None
 PluginInstance = None

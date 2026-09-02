@@ -86,7 +86,7 @@ On subsequent runs, it skips setup and boots directly.
 ## 📖 Documentation
 
 <details>
-<summary><strong>📋 Configuration Reference (kaiburrCfg.json)</strong></summary>
+<summary><strong>📋 Configuration Reference (kaiburrCfg.yaml)</strong></summary>
 
 <br>
 
@@ -145,7 +145,7 @@ On subsequent runs, it skips setup and boots directly.
 
 <br>
 
-Plugins are loaded as Python packages via `kaiburrCfg.json`:
+Plugins are loaded as Python packages via `kaiburrCfg.yaml`:
 
 ```json
 {
@@ -251,11 +251,11 @@ kaiburr/
 └── (project root)
 
 configstore_kaiburr/        # Your config overlay
-├── kaiburrCfg.json
+├── kaiburrCfg.yaml
 └── plugins/
     └── shared/
         └── myplugin/
-            ├── pluginCfg.json
+            ├── pluginCfg.yaml
             └── envfile.env
 ```
 
@@ -274,7 +274,7 @@ Deploy private plugin codebases using [SSH deploy keys](https://docs.gitlab.com/
    {user}/{repo}/{branch}=./key/{keyfile}
    ```
 3. Each entry generates a folder in `./update/deploy/<foldername>/`
-4. Add the deploy path to `kaiburrCfg.json`:
+4. Add the deploy path to `kaiburrCfg.yaml`:
    ```json
    {
        "paths": [

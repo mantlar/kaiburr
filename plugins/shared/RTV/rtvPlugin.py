@@ -74,7 +74,7 @@ SERVER_DATA = None
 
 
 # Configuration file paths and defaults
-DEFAULT_CFG_JSON = os.path.join(os.path.dirname(__file__), "rtvConfig.json")
+DEFAULT_CFG_JSON = os.path.join(os.path.dirname(__file__), "rtvConfig.yaml")
 DEFAULT_CFG_YAML = os.path.join(os.path.dirname(__file__), "rtvConfig.yaml")
 DEFAULT_CFG = None
 
@@ -219,7 +219,7 @@ MBMODE_ID_MAP = {
 if not hasattr(DEFAULT_CFG, 'cfg'):
     Log.error("Failed to initialize configuration. Using default settings.")
     DEFAULT_CFG.cfg = json.loads(CONFIG_FALLBACK)
-    Log.error(f"Could not open config file at {os.path.dirname(__file__) + 'rtvConfig.json, ensure the file is a valid JSON file in the correct file path.'}")
+    Log.error(f"Could not open config file at {os.path.dirname(__file__) + 'rtvConfig.yaml, ensure the file is a valid JSON file in the correct file path.'}")
     with open(DEFAULT_CFG_PATH, "wt") as f:
         f.write(CONFIG_FALLBACK)
 
@@ -446,9 +446,8 @@ class RTV(object):
         
         # Message formatting
         self._messagePrefix : str = colors.COLOR_CODES[self._themeColor] + self._config.cfg["MessagePrefix"]
-        
         # Map management
-        self._mapContainer = MapContainer(GetAllMaps(), self)
+        self._mapContainer = MapContainer(GetAllMaps(self._serverData), self)
         
         # Command definitions
         self._commandList = \
@@ -894,7 +893,7 @@ class RTV(object):
         self._currentVote = newVote
         self._OnVoteStart()
         self._currentVote._Start()
-        self.SvSay(f"{colors.ColorizeText('RTV', self._themeColor)} has started! Vote will complete in {colors.ColorizeText(str(self._currentVote._voteTime), self._themeColor)} seconds.")
+        self.SvSay(f"{colors.ColorizeText('Rock The Vote', self._themeColor)} has started! Vote will complete in {colors.ColorizeText(str(self._currentVote._voteTime), self._themeColor)} seconds.")
 
     def _StartRTMVote(self, choices=None):
         """Start Rock the Mode process"""
@@ -1539,29 +1538,11 @@ def OnEvent(event) -> bool:
     return False
 
 # Helper function to get all map names from currently installed PK3 files located in MBII directory and base directory next to MBII
-def GetAllMaps() -> list[Map]:
+def GetAllMaps(serverData) -> list[Map]:
     """Scan PK3 files in MBII directories to discover available maps"""
     # Start by assuming the MBII directory is not found
-    mbiiDir = os.path.abspath(DEFAULT_CFG.cfg["MBIIPath"])
+    mbiiDir = serverData.mbiiPath
     if not os.path.exists(mbiiDir):
-        # Try to find the MBII directory relatively (this is now the primary method)
-        Log.info("Attempting to find MBII directory relative to the current working directory...")
-        searchDir = os.getcwd()
-        while True:
-            if os.path.exists(os.path.join(searchDir, "MBII")):
-                mbiiDir = os.path.join(searchDir, "MBII")
-                Log.info(f"SUCCESS! Found MBII directory at {mbiiDir}.")
-                break
-            else:
-                oldDir = searchDir
-                searchDir = os.path.dirname(searchDir)
-                if oldDir == searchDir:
-                    # We've hit the top without finding the directory
-                    Log.error("FAILURE. No MBII directory found through relative search.")
-                    break
-
-    # Check if a path was successfully found
-    if mbiiDir is None:
         Log.error("Cannot proceed as the MBII directory could not be located.")
         return []
 

@@ -13,7 +13,7 @@ import lib.shared.colors as colors
 Log = logging.getLogger(__name__)
 
 # Load config
-config_path = os.path.join(os.path.dirname(__file__), "roundBettingConfig.json")
+config_path = os.path.join(os.path.dirname(__file__), "roundBettingConfig.yaml")
 try:
     with open(config_path, "r") as f:
         config = json.load(f)

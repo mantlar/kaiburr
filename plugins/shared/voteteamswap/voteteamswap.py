@@ -32,7 +32,7 @@ from lib.shared.timeout import Timeout
 SERVER_DATA = None
 Log = logging.getLogger(__name__)
 
-CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "voteteamswapCfg.json")
+CONFIG_DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "voteteamswapCfg.yaml")
 
 CONFIG_FALLBACK = """{
     "enabled": true,
@@ -46,7 +46,7 @@ CONFIG_FALLBACK = """{
     "defaultTeam2": "LEG_Evil"
 }"""
 
-VoteteamswapConfig = config.Config.fromJSON(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
+VoteteamswapConfig = config.Config.from_file(CONFIG_DEFAULT_PATH, CONFIG_FALLBACK)
 
 PluginInstance = None
 
