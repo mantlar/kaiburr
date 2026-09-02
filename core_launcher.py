@@ -1,7 +1,6 @@
 import os
 import sys
 import subprocess
-import yaml
 import time
 import urllib.request
 import winreg
@@ -192,6 +191,7 @@ def run_setup_wizard():
         ]
     }
     
+    import yaml
     with open(CONFIG_PATH, "w") as f:
         yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
 
@@ -275,6 +275,7 @@ def main():
             run_setup_wizard()
             config_file = CONFIG_PATH
         
+    import yaml
     with open(config_file, 'r') as f:
         config = yaml.safe_load(f)
         
