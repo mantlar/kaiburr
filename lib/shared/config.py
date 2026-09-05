@@ -52,6 +52,64 @@ class Config(object):
             Log.debug(f"Config parameter '{paramName}' not found, using default value: {defaultValue}")
             return defaultValue;
 
+    def ApplyDefaults(self, defaults, label : str = None):
+        """Recursively fill in missing config options from *defaults*.
+
+        *defaults* may be:
+          - a dict   – used directly as the reference template
+          - a str    – parsed as JSON first, then YAML if JSON fails
+          - a Config – its .cfg dict is used
+
+        For every key present in the defaults but absent from this config,
+        a WARNING is logged and the default value is inserted.  Nested
+        dicts are walked recursively so individual sub-keys are handled.
+
+        *label* is an optional prefix used in log messages to identify
+        which config file/plugin the warning belongs to.
+        """
+        defaults_dict = Config._resolve_defaults(defaults);
+        if defaults_dict is None:
+            return;
+        prefix = f"[{label}] " if label else "";
+        Config._apply_defaults_recursive(self.cfg, defaults_dict, path="", prefix=prefix);
+
+    @staticmethod
+    def _resolve_defaults(defaults) -> dict:
+        """Convert *defaults* (str | dict | Config) to a plain dict."""
+        if defaults is None:
+            return None;
+        if isinstance(defaults, dict):
+            return defaults;
+        if isinstance(defaults, Config):
+            return defaults.cfg;
+        if isinstance(defaults, str):
+            # Try JSON first (most plugin fallbacks are JSON strings)
+            try:
+                return json.loads(defaults);
+            except Exception:
+                pass;
+            # Fall back to YAML
+            try:
+                result = yaml.safe_load(defaults);
+                return result if isinstance(result, dict) else None;
+            except Exception:
+                pass;
+            Log.warning("ApplyDefaults: unable to parse defaults string as JSON or YAML");
+            return None;
+        Log.warning(f"ApplyDefaults: unsupported defaults type {type(defaults).__name__}");
+        return None;
+
+    @staticmethod
+    def _apply_defaults_recursive(cfg_dict: dict, defaults_dict: dict, path: str = "", prefix: str = ""):
+        """Walk *defaults_dict* and insert any keys missing from *cfg_dict*."""
+        for key, default_value in defaults_dict.items():
+            current_path = f"{path}.{key}" if path else key;
+            if key not in cfg_dict:
+                Log.warning(f"{prefix}Config option '{current_path}' is not set. Using default value: {default_value}");
+                cfg_dict[key] = default_value;
+            elif isinstance(default_value, dict) and isinstance(cfg_dict.get(key), dict):
+                Config._apply_defaults_recursive(cfg_dict[key], default_value, current_path, prefix);
+
     @staticmethod
     def ValidatePropsStr(cfg : Self, target : str) -> bool:
         if target != None:
@@ -84,6 +142,8 @@ class JsonConfig(Config):
             with open(jsonPath) as file:
                 config = json.load(file);
                 instance = cls(config);
+                if default is not None:
+                    instance.ApplyDefaults(default, label=os.path.basename(jsonPath));
                 Log.info(f"Successfully loaded config from: {jsonPath}")
                 return instance;
         except FileNotFoundError:
@@ -169,6 +229,8 @@ class YamlConfig(Config):
                 if config == None:
                     config = {};
                 instance = cls(config);
+                if default is not None:
+                    instance.ApplyDefaults(default, label=os.path.basename(yamlPath));
                 Log.info(f"Successfully loaded config from: {yamlPath}")
                 return instance;
         except FileNotFoundError:

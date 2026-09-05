@@ -238,16 +238,6 @@ class MBIIServer:
             self._status = MBIIServer.STATUS_CONFIG_ERROR
             return
 
-        # Set default watchdog command based on platform if not specified
-        if "watchdog" in self._config.cfg:
-            if not self._config.cfg["watchdog"].get("serverStartCommand", ""):
-                if IsWindows:
-                    # Use autostart script which only starts MB2 server, not Kaiburr
-                    self._config.cfg["watchdog"]["serverStartCommand"] = os.path.join(os.getcwd(), "start", "win", "bin", "autostart_win.py")
-                else:
-                    # Use autostart script which only starts MB2 server, not Kaiburr
-                    self._config.cfg["watchdog"]["serverStartCommand"] = os.path.join(os.getcwd(), "start", "linux_macOS", "bin", "autostart_linux_macOS.py")
-                Log.debug(f"Set default watchdog command: {self._config.cfg['watchdog']['serverStartCommand']}")
 
         if "paths" in self._config.cfg:
             for path in self._config.cfg["paths"]:
@@ -408,6 +398,66 @@ class MBIIServer:
 
         Log.info("Kaiburr initialized in %.2f seconds!\n" %(time.time() - startTime))
 
+    def _FlushSessionState(self):
+        """Clear all in-memory session state after a server crash.
+
+        This fires disconnect events for every tracked client (so plugins
+        can clean up their own state), fires a SHUTDOWN event, resets the
+        client list, and zeroes out serverData runtime fields.
+        """
+        Log.info("Flushing stale session state...")
+
+        # Fire disconnect events for every client so plugins can clean up
+        allClients = self._clientManager.GetAllClients()
+        for cl in allClients:
+            Log.info(f"Flush: pseudo-disconnecting client {cl}")
+            self._pluginManager.Event(
+                kaiburrEvent.ClientDisconnectEvent(
+                    cl, None,
+                    reason=kaiburrEvent.ClientDisconnectEvent.REASON_SERVER_SHUTDOWN
+                )
+            )
+
+        # Fire shutdown event so plugins know the session has ended
+        self._pluginManager.Event(
+            kaiburrEvent.Event(kaiburrEvent.KAIBURR_EVENT_TYPE_SHUTDOWN, None)
+        )
+
+        # Clear all tracked clients
+        client_count = self._clientManager.GetClientCount()
+        self._clientManager.Reset()
+        Log.info(f"Flush: cleared {client_count} client(s) from client manager")
+
+        # Reset server runtime data
+        self._serverData.mapName = ""
+        self._serverData.mode = -1
+        self._serverData.maxPlayers = 0
+        self._serverData.name = ""
+        self._serverData.version = ""
+        self._serverData.gameType = ""
+        self._serverData.serverVars.clear()
+
+        Log.info("Session state flushed successfully.")
+
+    def _RefreshServerState(self):
+        """Re-query the new server process to repopulate serverData fields.
+
+        Called when the watchdog detects the server has (re)started.
+        Fields like hostname, version, gameType, mode, and maxPlayers are
+        only populated via the rcon 'status' command, not from log parsing,
+        so we need to explicitly re-fetch them.
+        """
+        Log.info("Refreshing server state from new process...")
+        try:
+            self._FetchStatus()
+            is_extended = self._primarySvInterface.GetCvar("sv_extended")
+            self._serverData.is_extended = is_extended == "1"
+            Log.info(f"Server state refreshed: map={self._serverData.mapName}, "
+                     f"mode={self._serverData.mode}, maxPlayers={self._serverData.maxPlayers}, "
+                     f"extended={self._serverData.is_extended}")
+        except Exception as e:
+            Log.warning(f"Failed to refresh server state (server may still be loading): {e}")
+
     def _HandleWatchdogEvent(self, event_type):
         """Handle watchdog events from the RconInterface watchdog"""
         try:
@@ -431,51 +481,89 @@ class MBIIServer:
             elif event_type == "died":
                 Log.error(f"Watchdog: MB2 server process '{server_name}' has died!")
 
+                # Flush all stale session state so plugins and Kaiburr don't
+                # think players from the crashed session are still connected.
+                self._FlushSessionState()
+
                 # Attempt to restart server if configured
                 if watchdog_config.get("restartServer", False):
                     restart_cmd_path = watchdog_config.get("serverStartCommand", "")
 
-                    if not restart_cmd_path:
-                        Log.error(f"Watchdog: serverStartCommand is not configured")
+                    # If a custom serverStartCommand is specified, use it
+                    if restart_cmd_path:
+                        if not os.path.exists(restart_cmd_path):
+                            Log.error(f"Watchdog: Custom start script not found at {restart_cmd_path}")
+                            return
+
+                        Log.info(f"Watchdog: Restarting MB2 server with custom script: {restart_cmd_path}")
+                        try:
+                            working_dir = os.getcwd()
+                            is_python_script = restart_cmd_path.endswith('.py')
+
+                            if is_python_script:
+                                if IsWindows:
+                                    subprocess.Popen([sys.executable, restart_cmd_path], cwd=working_dir, creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+                                else:
+                                    subprocess.Popen([sys.executable, restart_cmd_path], cwd=working_dir, stdin=None, stdout=None, stderr=None, close_fds=True, start_new_session=True)
+                            else:
+                                if IsWindows:
+                                    subprocess.Popen(f'start "" "{restart_cmd_path}"', shell=True, cwd=working_dir, creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+                                else:
+                                    subprocess.Popen(f'nohup "{restart_cmd_path}" > /dev/null 2>&1 &', shell=True, cwd=working_dir, stdin=None, stdout=None, stderr=None, close_fds=True, start_new_session=True)
+
+                            Log.info("Watchdog: Custom restart command executed successfully")
+                        except Exception as e:
+                            Log.error(f"Watchdog: Failed to execute custom restart script: {e}")
                         return
 
-                    # Check if script exists
-                    if not os.path.exists(restart_cmd_path):
-                        Log.error(f"Watchdog: Start script not found at {restart_cmd_path}")
+                    # No custom script — launch the server executable directly from config
+                    server_path = self._config.cfg.get("serverPath", "")
+                    server_file = self._config.cfg.get("serverFileName", "")
+                    full_path = os.path.join(server_path, server_file)
+
+                    if not os.path.exists(full_path):
+                        Log.error(f"Watchdog: Server executable not found at {full_path}")
                         return
 
-                    Log.info(f"Watchdog: Attempting to restart MB2 server with: {restart_cmd_path}")
+                    # Build launch arguments from the first remote's config
+                    rcon_cfg = self._config.cfg.get("interfaces", {}).get("rcon", {})
+                    remotes = rcon_cfg.get("Remotes", [])
+                    log_file = self._config.cfg.get("logFilename", "server.log")
+                    port = "29070"
+
+                    if remotes:
+                        port = str(remotes[0].get("port", 29070))
+                        log_file = remotes[0].get("logFilename", log_file)
+
+                    args = [
+                        full_path,
+                        "--debug",
+                        "+set", "g_log", log_file,
+                        "+set", "g_logExplicit", "3",
+                        "+set", "g_logClientInfo", "1",
+                        "+set", "g_logSync", "4",
+                        "+set", "com_logChat", "2",
+                        "+set", "dedicated", "2",
+                        "+set", "fs_game", "MBII",
+                        "+exec", "server.cfg",
+                        "+set", "net_port", port
+                    ]
+
+                    Log.info(f"Watchdog: Launching server directly: {server_file} on port {port}")
                     try:
-                        # Use current working directory for scripts
-                        working_dir = os.getcwd()
-
-                        # Determine if this is a Python script or executable
-                        is_python_script = restart_cmd_path.endswith('.py')
-
-                        if is_python_script:
-                            # Execute Python script with the same Python interpreter
-                            if IsWindows:
-                                # Windows: Run python script in detached process
-                                subprocess.Popen([sys.executable, restart_cmd_path], cwd=working_dir, creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
-                            else:
-                                # Unix: Run python script in background
-                                subprocess.Popen([sys.executable, restart_cmd_path], cwd=working_dir, stdin=None, stdout=None, stderr=None, close_fds=True, start_new_session=True)
+                        if IsWindows:
+                            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE, cwd=server_path)
                         else:
-                            # Execute batch/shell script
-                            if IsWindows:
-                                restart_cmd = f'start "" "{restart_cmd_path}"'
-                                subprocess.Popen(restart_cmd, shell=True, cwd=working_dir, creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
-                            else:
-                                restart_cmd = f'nohup "{restart_cmd_path}" > /dev/null 2>&1 &'
-                                subprocess.Popen(restart_cmd, shell=True, cwd=working_dir, stdin=None, stdout=None, stderr=None, close_fds=True, start_new_session=True)
-
+                            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True, cwd=server_path)
                         Log.info("Watchdog: MB2 server restart command executed successfully")
                     except Exception as e:
                         Log.error(f"Watchdog: Failed to restart MB2 server: {e}")
             elif event_type == "started":
                 Log.info(f"Watchdog: MB2 server process '{server_name}' has started")
+                self._RefreshServerState()
             elif event_type == "restarted":
                 Log.info(f"Watchdog: MB2 server process '{server_name}' has been restarted")
+                self._RefreshServerState()
         except Exception as e:
             Log.error(f"Error in watchdog event handler: {e}")
 
@@ -1820,7 +1908,7 @@ def main():
     else:
         Log.info("Kaiburr initialize error %s" % (MBIIServer.StatusString(int_status)))
 
-    Log.info("change da world my final message goodbye (kaiburr exit)")
+    Log.info("change da world my final message. goodb ye (kaiburr exit)")
 
 
 if __name__ == "__main__":
