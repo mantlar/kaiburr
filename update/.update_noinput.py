@@ -208,11 +208,6 @@ def sync_repo(commit_hash=None):
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] Git sync failed: {e}")
 
-# Function to delete temporary files
-def remove_temp_files():
-    if os.path.exists(EXTRACT_DIR):
-        shutil.rmtree(EXTRACT_DIR, ignore_errors=True)
-        print("[CLEANUP] Temporary files removed.")
 
 # Main script execution
 if __name__ == "__main__":
