@@ -4,26 +4,30 @@ import lib.shared.teams as teams
 import lib.shared.colors as colors
 from lib.shared.serverdata import ServerData
 from lib.shared.player import Player
+import lib.shared.config as config
 import logging
-import json
 import os
 from time import time
 
 Log = logging.getLogger(__name__)
 
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "antiafk_config.yaml")
+
 # Default configuration
-DEFAULT_CONFIG = {
-    "enabled": True,
-    "maxSpectatorRounds": 5,
-    "warningRounds": [3, 4],  # Rounds at which to send warnings
-    "kickMessage": "^1was kicked for being AFK in spectator too long",
-    "warningMessage": "^3Warning: Join a team or you will be kicked in {rounds} round(s)!",
-    "messagePrefix": "^9[Anti-AFK]^7 ",
-    "exemptJAGuids": [],  # List of ja_guids that are exempt from AFK kicks (dont use this)
-    "resetOnMapChange": True,  # Reset AFK counters when map changes
-    "exemptSmodUsers": True,  # Exempt players logged into SMOD from AFK kicks
-    "minimumPlayers": 0  # Minimum number of players before AFK enforcement begins (0 = always enforce)
-}
+CONFIG_FALLBACK = """
+enabled: true
+maxSpectatorRounds: 5
+warningRounds:
+  - 3
+  - 4
+kickMessage: "^1was kicked for being AFK in spectator too long"
+warningMessage: "^3Warning: Join a team or you will be kicked in {rounds} round(s)!"
+messagePrefix: "^9[Anti-AFK]^7 "
+exemptJAGuids: []
+resetOnMapChange: true
+exemptSmodUsers: true
+minimumPlayers: 0
+"""
 
 class AFKPlayer(Player):
     """Tracks AFK status for a player"""
@@ -62,38 +66,14 @@ class AntiAFKPlugin:
     def __init__(self, server_data: ServerData):
         self._serverData = server_data
         self._players : dict[int, AFKPlayer] = {}  # Dict[int, AFKPlayer]
-        self._config = self._load_config()
-        self._messagePrefix = self._config["messagePrefix"]
+        cfg_obj = config.Config.from_file(CONFIG_PATH, CONFIG_FALLBACK)
+        self._config = cfg_obj.cfg if cfg_obj else {}
+        self._messagePrefix = self._config.get("messagePrefix", "^9[Anti-AFK]^7 ")
         self._smod_ip_to_client = {}  # Map SMOD IP to client for login tracking
         
         Log.info("Anti-AFK Plugin initialized")
     
-    def _load_config(self) -> dict:
-        """Load configuration from JSON file or create default"""
-        config_path = os.path.join(
-            os.path.dirname(__file__),
-            "antiafk_config.yaml"
-        )
-        
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, 'r') as f:
-                    config = json.load(f)
-                    Log.info(f"Loaded Anti-AFK config from {config_path}")
-                    return config
-            except Exception as e:
-                Log.error(f"Failed to load config: {e}. Using defaults.")
-                return DEFAULT_CONFIG
-        else:
-            # Create default config file
-            try:
-                with open(config_path, 'w') as f:
-                    json.dump(DEFAULT_CONFIG, f, indent=4)
-                    Log.info(f"Created default Anti-AFK config at {config_path}")
-            except Exception as e:
-                Log.error(f"Failed to create default config: {e}")
-            return DEFAULT_CONFIG
-    
+
     def _is_localhost(self, client_ip: str) -> bool:
         """Check if IP is localhost"""
         ip = client_ip.split(':')[0] if ':' in client_ip else client_ip
