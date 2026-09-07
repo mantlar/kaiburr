@@ -1,5 +1,4 @@
 import sqlite3
-import mysql.connector
 
 
 class ADatabase():
@@ -96,8 +95,12 @@ class DatabaseMySQL(ADatabase):
         if self.IsOpened():
             self.Close()
         try:
+            import mysql.connector
             self._connection = mysql.connector.connect(**self._config)
             return True
+        except ImportError:
+            print("mysql-connector-python is not installed. Install it with: pip install mysql-connector-python")
+            return False
         except Exception as e:
             print(f"Failed to connect to MySQL: {e}")
             return False
