@@ -260,10 +260,21 @@ class YamlConfig(Config):
                 return None;
             else:
                 instance = cls.from_string(default);
+
+                # Auto-convert JSON default strings to YAML for clean output
+                default_to_write = default
+                try:
+                    import json
+                    parsed_default = json.loads(default)
+                    default_to_write = yaml.safe_dump(parsed_default, default_flow_style=False, sort_keys=False)
+                except:
+                    pass
+
                 f = open(yamlPath, "wt")
-                f.write(default)
+                f.write(default_to_write)
                 f.close()
                 return instance;
+
 
     @classmethod
     def from_string(cls, target : str) -> Self:
