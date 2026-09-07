@@ -62,13 +62,7 @@ CONFIG_FALLBACK = \
 }
 """
 
-# Create default config if it doesn't exist
-if DEFAULT_CFG is None:
-    DEFAULT_CFG = config.Config()
-    DEFAULT_CFG.cfg = json.loads(CONFIG_FALLBACK)
-    Log.error(f"Could not open config file at {DEFAULT_CFG_PATH}, ensure the file is a valid JSON file in the correct file path.")
-    with open(DEFAULT_CFG_PATH, "wt") as f:
-        f.write(CONFIG_FALLBACK)
+DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_PATH, CONFIG_FALLBACK)
 
 class PendingTransaction:
     def __init__(self, player):

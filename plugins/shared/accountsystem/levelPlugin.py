@@ -20,24 +20,23 @@ DB = None
 DEFAULT_CFG_PATH = os.path.join(os.path.dirname(__file__), "levelConfig.yaml")
 
 # Fallback configuration
-CONFIG_FALLBACK = {
-    "scalar": 100,
-    "kill_xp": 10,
-    "suicide_xp": -5,
-    "teamkill_xp": -20,
-    "themecolor": "yellow",
-    "use_centerprint": True,
-    "rank_names": [
-        "Youngling",
-        "Apprentice",
-        "Initiate",
-        "Padawan",
-        "Knight",
-        "Master",
-        "Grandmaster"
-    ],
-    "max_rank_name": "The Force"
-}
+CONFIG_FALLBACK = """
+scalar: 100
+kill_xp: 10
+suicide_xp: -5
+teamkill_xp: -20
+themecolor: yellow
+use_centerprint: true
+rank_names:
+  - Youngling
+  - Apprentice
+  - Initiate
+  - Padawan
+  - Knight
+  - Master
+  - Grandmaster
+max_rank_name: The Force
+"""
 
 CFG = None
 COMMAND_HANDLERS = {}
@@ -47,18 +46,9 @@ def OnInitialize(serverData: ServerData, exports=None) -> bool:
     global SERVER_DATA, CFG
     SERVER_DATA = serverData
     
-    # Load config
-    if os.path.exists(DEFAULT_CFG_PATH):
-        try:
-            with open(DEFAULT_CFG_PATH, "r") as f:
-                CFG = json.load(f)
-        except:
-            CFG = CONFIG_FALLBACK
-    else:
-        CFG = CONFIG_FALLBACK
-        with open(DEFAULT_CFG_PATH, "w") as f:
-            json.dump(CFG, f, indent=4)
-            
+    # Load config via Config.from_file so YAML is generated/migrated automatically
+    _cfg_obj = config.Config.from_file(DEFAULT_CFG_PATH, CONFIG_FALLBACK)
+    CFG = _cfg_obj.cfg if _cfg_obj else {}
     return True
 
 def OnStart() -> bool:

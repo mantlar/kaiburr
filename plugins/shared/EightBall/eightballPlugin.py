@@ -49,19 +49,7 @@ CONFIG_FALLBACK = '''{
     ]
 }'''
 
-try:
-    if os.path.exists(DEFAULT_CFG_JSON):
-        DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_JSON, CONFIG_FALLBACK)
-        Log.info(f"Loaded configuration from JSON file: {DEFAULT_CFG_JSON}")
-    else:
-        DEFAULT_CFG = config.Config()
-        DEFAULT_CFG.cfg = json.loads(CONFIG_FALLBACK)
-        with open(DEFAULT_CFG_JSON, "wt") as f:
-            f.write(CONFIG_FALLBACK)
-except Exception as e:
-    Log.error(f"Error loading configuration: {str(e)}")
-    DEFAULT_CFG = config.Config()
-    DEFAULT_CFG.cfg = json.loads(CONFIG_FALLBACK)
+DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_JSON, CONFIG_FALLBACK)
 
 class EightBallPlayer(player.Player):
     def __init__(self, cl: client.Client):
