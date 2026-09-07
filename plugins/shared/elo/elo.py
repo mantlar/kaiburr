@@ -6,6 +6,7 @@
 
 import time
 import math
+import yaml
 import logging
 import os
 import json
@@ -646,7 +647,7 @@ class EloPlugin:
                 self.extralives_map = {}
                 return
             with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                data = yaml.safe_load(f) or {}
             # Expect structure: { total_characters: N, characters: { name: { extralives: int, ... }, ... } }
             chars = data.get("characters", {}) if isinstance(data, dict) else {}
             table = {}
