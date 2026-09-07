@@ -182,28 +182,8 @@ CONFIG_FALLBACK = '''{
     }
 }'''
 
-# Try to load YAML config first, fall back to JSON if not found
-try:
-    if os.path.exists(DEFAULT_CFG_YAML):
-        DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_YAML, CONFIG_FALLBACK)
-        DEFAULT_CFG_PATH = DEFAULT_CFG_YAML
-        Log.info(f"Loaded configuration from YAML file: {DEFAULT_CFG_YAML}")
-    elif os.path.exists(DEFAULT_CFG_JSON):
-        DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_JSON, CONFIG_FALLBACK)
-        DEFAULT_CFG_PATH = DEFAULT_CFG_JSON
-        Log.info(f"Loaded configuration from JSON file: {DEFAULT_CFG_JSON}")
-    else:
-        # If neither file exists, create a default YAML config
-        DEFAULT_CFG = config.Config.FromString(CONFIG_FALLBACK)
-        with open(DEFAULT_CFG_YAML, 'w', encoding='utf-8') as f:
-            import yaml
-            yaml.dump(json.loads(CONFIG_FALLBACK), f, default_flow_style=False, sort_keys=False)
-        Log.warning(f"No config file found. Created default YAML config at: {DEFAULT_CFG_YAML}")
-except Exception as e:
-    Log.error(f"Error loading configuration: {str(e)}")
-    DEFAULT_CFG = config.Config()
-    DEFAULT_CFG.cfg = json.loads(CONFIG_FALLBACK)
-    Log.warning("Using default configuration due to error")
+DEFAULT_CFG = config.Config.from_file(DEFAULT_CFG_YAML, CONFIG_FALLBACK)
+DEFAULT_CFG_PATH = DEFAULT_CFG_YAML
 
 # Map game modes to their internal IDs
 # Map game modes to their internal IDs
@@ -215,13 +195,6 @@ MBMODE_ID_MAP = {
     'legends' : 4
 }
 
-# Final check if we have a valid config
-if not hasattr(DEFAULT_CFG, 'cfg'):
-    Log.error("Failed to initialize configuration. Using default settings.")
-    DEFAULT_CFG.cfg = json.loads(CONFIG_FALLBACK)
-    Log.error(f"Could not open config file at {os.path.dirname(__file__) + 'rtvConfig.yaml, ensure the file is a valid JSON file in the correct file path.'}")
-    with open(DEFAULT_CFG_PATH, "wt") as f:
-        f.write(CONFIG_FALLBACK)
 
 # Initialize logger
 

@@ -1,5 +1,6 @@
 import logging
 import json
+import yaml
 import os
 import threading
 import urllib.request
@@ -41,8 +42,9 @@ class OllamabotPlugin:
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    self.config.update(data)
+                    data = yaml.safe_load(f)
+                    if data:
+                        self.config.update(data)
             except Exception as e:
                 Log.error(f"Failed to load ollamabotCfg.yaml: {e}")
         else:
@@ -51,7 +53,7 @@ class OllamabotPlugin:
     def SaveConfig(self):
         try:
             with open(self.config_path, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4)
+                yaml.dump(self.config, f, default_flow_style=False, sort_keys=False)
         except Exception as e:
             Log.error(f"Failed to save ollamabotCfg.yaml: {e}")
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import yaml
 import re
 import time
 from datetime import datetime
@@ -59,12 +60,13 @@ class AutomodPlugin:
         try:
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
-                    loaded = json.load(f)
-                    default_config.update(loaded)
+                    loaded = yaml.safe_load(f)
+                    if loaded:
+                        default_config.update(loaded)
             else:
                 # Create default config
                 with open(config_path, 'w') as f:
-                    json.dump(default_config, f, indent=4)
+                    yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
                 Log.info(f"Created default configuration at {config_path}")
         except Exception as e:
             Log.error(f"Error loading config: {e}. Using defaults.")
@@ -130,7 +132,7 @@ class AutomodPlugin:
         try:
             if os.path.exists(log_path):
                 with open(log_path, 'r') as f:
-                    return json.load(f)
+                    return yaml.safe_load(f) or {}
         except Exception as e:
             Log.error(f"Error loading violation log: {e}. Starting with empty log.")
         return {}
@@ -140,7 +142,7 @@ class AutomodPlugin:
         log_path = os.path.join(os.path.dirname(__file__), "punishedPlayers.yaml")
         try:
             with open(log_path, 'w') as f:
-                json.dump(self._violation_log, f, indent=4)
+                yaml.dump(self._violation_log, f, default_flow_style=False, sort_keys=False)
         except Exception as e:
             Log.error(f"Error saving violation log: {e}")
 

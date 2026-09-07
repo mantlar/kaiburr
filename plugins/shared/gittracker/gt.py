@@ -7,6 +7,7 @@ import lib.shared.teams as teams
 import lib.shared.client as client
 import subprocess
 import json
+import yaml
 import sys
 import os
 import time
@@ -310,7 +311,7 @@ def create_config_placeholder():
             "isGFBuilding": FALSE_VAR
         }
         with open(CONFIG_FILE, "w") as f:
-            json.dump(default_config, f, indent=2)
+            yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
         print(f"Created {CONFIG_FILE} with placeholder repositories.")
 
 def load_config():
@@ -319,7 +320,7 @@ def load_config():
         return None
 
     with open(CONFIG_FILE, "r") as f:
-        config = json.load(f)
+        config = yaml.safe_load(f)
 
     for repo in config.get("repositories", []):
         if (repo["repository"] == PLACEHOLDER_REPO or
@@ -342,7 +343,7 @@ def load_config():
 def write_config(config_data):
     try:
         with open(CONFIG_FILE, "w") as f:
-            json.dump(config_data, f, indent=2)
+            yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
         Log.info(f"Configuration saved to {CONFIG_FILE}")
         return True
     except Exception as e:

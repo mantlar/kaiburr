@@ -6,6 +6,7 @@ endpoints for moderation actions, and streams live server events via SSE.
 """
 
 import os
+import yaml
 import json
 import logging
 import threading
@@ -66,7 +67,7 @@ def load_config():
     if os.path.exists(CONFIG_PATH):
         try:
             with open(CONFIG_PATH, "r") as f:
-                CONFIG = json.load(f)
+                CONFIG = yaml.safe_load(f)
         except Exception as e:
             Log.error(f"Error loading webadmin config: {e}")
             CONFIG = dict(CONFIG_DEFAULTS)
@@ -90,7 +91,7 @@ def save_config():
     """Write config to disk."""
     try:
         with open(CONFIG_PATH, "w") as f:
-            json.dump(CONFIG, f, indent=4)
+            yaml.dump(CONFIG, f, default_flow_style=False, sort_keys=False)
     except Exception as e:
         Log.error(f"Error saving webadmin config: {e}")
 

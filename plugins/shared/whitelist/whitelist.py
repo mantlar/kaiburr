@@ -10,6 +10,7 @@ import ipaddress
 import re
 import os
 import json
+import yaml
 
 SERVER_DATA = None
 
@@ -187,7 +188,7 @@ class Whitelist():
         """Save current configuration to JSON file"""
         try:
             with open(CONFIG_DEFAULT_PATH, "w") as f:
-                json.dump(self.config.cfg, f, indent=4)
+                yaml.dump(self.config.cfg, f, default_flow_style=False, sort_keys=False)
             Log.info("Configuration saved to %s", CONFIG_DEFAULT_PATH)
             return True
         except Exception as e:

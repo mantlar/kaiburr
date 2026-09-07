@@ -6,6 +6,7 @@ import lib.shared.colors as colors
 import lib.shared.client as client
 import subprocess
 import json
+import yaml
 import sys
 import os
 import time
@@ -47,11 +48,11 @@ def SV_LoadJson():
 
     if not os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "w") as file:
-            json.dump(FALLBACK_JSON, file, indent=4)
+            yaml.dump(FALLBACK_JSON, file, default_flow_style=False, sort_keys=False)
         Log.info(f"Created {CONFIG_FILE} with default fallback values.")
     
     with open(CONFIG_FILE, "r") as file:
-        CONFIG = json.load(file)
+        CONFIG = yaml.safe_load(file)
 
     if any(PLACEHOLDER in str(value) for value in CONFIG.values()):
         Log.error(f"Placeholder values found in {CONFIG_FILE}, please fill out sbConfig.yaml and return...")

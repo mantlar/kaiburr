@@ -1,5 +1,6 @@
 import os
 import json
+import yaml
 import logging
 import time
 import re
@@ -16,7 +17,7 @@ Log = logging.getLogger(__name__)
 config_path = os.path.join(os.path.dirname(__file__), "roundBettingConfig.yaml")
 try:
     with open(config_path, "r") as f:
-        config = json.load(f)
+        config = yaml.safe_load(f)
 except FileNotFoundError:
     config = {
         "betting_window_seconds": 30,
@@ -24,6 +25,8 @@ except FileNotFoundError:
         "house_cut_percent": 10,
         "early_bird_bonus_percent": 20
     }
+    with open(config_path, "w") as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
 class RoundBettingPlugin:
     def __init__(self, serverData):
