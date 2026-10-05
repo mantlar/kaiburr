@@ -68,3 +68,6 @@ scratch/
 test.bat
 tests/
 tools/
+*.env
+.env*
+*.bak
