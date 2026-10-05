@@ -3,7 +3,6 @@ import sys
 import subprocess
 import time
 import urllib.request
-import winreg
 
 KAIBURR_ROOT = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(KAIBURR_ROOT, "kaiburrCfg.yaml")
@@ -22,9 +21,11 @@ def run_command(cmd, desc):
         sys.exit(1)
 
 def check_msvc():
-    print_header("Checking Dependencies")
     if os.name != 'nt':
         return
+        
+    import winreg
+    print_header("Checking Dependencies")
         
     target_name = "Microsoft Visual C++ 2015-2022 Redistributable (x86)"
     reg_paths = [
@@ -89,8 +90,9 @@ def auto_detect_paths():
     max_depth = 5
     depth = 0
     
+    binary_names = ["mbiided.x86.exe", "openjkded.x86.exe"] if os.name == 'nt' else ["mbiided.i386", "openjkded.i386"]
     while depth < max_depth:
-        if os.path.exists(os.path.join(current_dir, "mbiided.x86.exe")) or os.path.exists(os.path.join(current_dir, "mbiided.i386")):
+        if any(os.path.exists(os.path.join(current_dir, b)) for b in binary_names):
             server_path = current_dir
             mbii_path = os.path.join(server_path, "MBII")
             if os.path.exists(mbii_path):
@@ -140,7 +142,13 @@ def run_setup_wizard():
     mbii_path = mbii_path.replace('\\', '/')
     server_path = server_path.replace('\\', '/')
     
-    server_file_name = "mbiided.x86.exe" if os.name == 'nt' else "mbiided.i386"
+    candidates = ["mbiided.x86.exe", "openjkded.x86.exe"] if os.name == 'nt' else ["mbiided.i386", "openjkded.i386"]
+    server_file_name = candidates[0]
+    if server_path:
+        for c in candidates:
+            if os.path.exists(os.path.join(server_path, c)):
+                server_file_name = c
+                break
     
     config = {
         "Name": "MBII Kaiburr",
@@ -241,6 +249,12 @@ def autostart_server(config):
         print(f"[ERROR] Autostart failed. Could not find server at {full_path}")
         return
         
+    if os.name != 'nt':
+        try:
+            os.chmod(full_path, 0o755)
+        except Exception:
+            pass
+            
     print(f"[*] Server is not running. Launching {server_file}...")
     
     args = [
