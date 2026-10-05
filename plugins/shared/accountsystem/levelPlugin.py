@@ -173,7 +173,10 @@ def UpdatePlayerXP(player: Player, amount: int, silent=False):
             # Use \\n as requested by user
             rank_name = GetRankName(new_level)
             msg = f"LEVEL UP!^7\\nYou are now level {colors.ColorizeText(new_level, color)}!\\nRank: {colors.ColorizeText(rank_name, color)}"
-            SERVER_DATA.interface.ClientCenterPrint(player.GetId(), msg)
+            if getattr(SERVER_DATA, "is_extended", False):
+                SERVER_DATA.interface.ClientCenterPrint(player.GetId(), msg)
+            else:
+                SERVER_DATA.interface.SvTell(player.GetId(), msg.replace("\\n", " | "))
         
         SERVER_DATA.interface.SvSay(f"{prefix}{player.GetName()}^7 leveled up to {colors.ColorizeText(new_level, color)} ({GetRankName(new_level)})!")
     elif amount != 0:
@@ -186,7 +189,10 @@ def UpdatePlayerXP(player: Player, amount: int, silent=False):
         
         sign = "+" if amount > 0 else ""
         status_msg = f"XP: {colors.ColorizeText(sign + str(amount), color)}\\n[{rank_name}^7]: ({level_progress}/{level_total}) to Next Level"
-        SERVER_DATA.interface.ClientCenterPrint(player.GetId(), status_msg)
+        if getattr(SERVER_DATA, "is_extended", False):
+            SERVER_DATA.interface.ClientCenterPrint(player.GetId(), status_msg)
+        else:
+            SERVER_DATA.interface.SvTell(player.GetId(), status_msg.replace("\\n", " | "))
 
 def SetPlayerXP(player: Player, amount: int):
     account_func = ACCOUNTS_XPRTS.Get("GetAccountByPlayerID").pointer
@@ -260,7 +266,10 @@ def HandleLevelTop(player: Player, teamId: int, args: list[str]):
     
     output = f"{prefix}Top 10 Players: " + " | ".join(entries)
     
-    SERVER_DATA.interface.SvPrintCon(output, str(player.GetId()))
+    if getattr(SERVER_DATA, "is_extended", False):
+        SERVER_DATA.interface.SvPrintCon(output, str(player.GetId()))
+    else:
+        SERVER_DATA.interface.SvTell(player.GetId(), output)
 
 # SMOD Handlers
 def HandleSetXP(playerName, smodId, adminIP, cmdArgs):

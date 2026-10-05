@@ -452,6 +452,8 @@ class MBIIServer:
             self._FetchStatus()
             is_extended = self._primarySvInterface.GetCvar("sv_extended")
             self._serverData.is_extended = is_extended == "1"
+            for iface in self._svInterfaces:
+                iface.is_extended = self._serverData.is_extended
             Log.info(f"Server state refreshed: map={self._serverData.mapName}, "
                      f"mode={self._serverData.mode}, maxPlayers={self._serverData.maxPlayers}, "
                      f"extended={self._serverData.is_extended}")
@@ -697,6 +699,8 @@ class MBIIServer:
 
             is_extended = self._primarySvInterface.GetCvar("sv_extended")
             self._serverData.is_extended = is_extended == "1"
+            for iface in self._svInterfaces:
+                iface.is_extended = self._serverData.is_extended
 
             for iface in self._svInterfaces:
                 if getattr(iface, "_emitterPort", 0) > 0 and not self._serverData.is_extended:

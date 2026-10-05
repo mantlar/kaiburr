@@ -168,6 +168,7 @@ class AServerInterface(IServerInterface):
         self._isOpened = False
         self._isReady = False
         self._it = self.TypeToEnum(type(self))
+        self.is_extended = False
     
     def Open(self) -> bool:
         if self._isOpened:
@@ -212,6 +213,7 @@ class AServerInterface(IServerInterface):
 class RconInterface(AServerInterface):
     def __init__(self, ipAddress : str, port : str, bindAddr : tuple, password : str, logPath : str, readDelay : int = 0.01, testRetrospect = False, procName = "mbiided.i386" if IsUnix else "mbiided.x86.exe", qconsolePath : str = None, emitterPort: int = 0):
         super().__init__()
+        self.is_extended = False
         self._emitterPort = emitterPort
         self._emitterSource = None
         self._qconsolePath = qconsolePath
@@ -451,26 +453,56 @@ class RconInterface(AServerInterface):
         return None
 
 
-    # !!! CUSTOM SERVER BUILD COMMANDS !!!
-    # THESE WILL NOT WORK WITH STANDARD OPENJK SERVER BUILD
+    # !!! CUSTOM SERVER BUILD COMMANDS WITH AUTOMATIC FALLBACKS !!!
     def SvPrint(self, msg : str, target : str = "all", tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.SvPrint(msg, target, tryAgain=tryAgain)
+            if getattr(self, "is_extended", False):
+                return self._rcon.SvPrint(msg, target, tryAgain=tryAgain)
+            else:
+                if str(target).lower() == "all":
+                    return self.SvSay(msg, tryAgain=tryAgain)
+                else:
+                    targets = str(target).split(",")
+                    res = None
+                    for t in targets:
+                        t = t.strip()
+                        if t.isdigit():
+                            res = self.SvTell(int(t), msg, tryAgain=tryAgain)
+                    return res
         return None
 
     def SvPrintCon(self, msg : str, target : str = "all", tryAgain: bool = False) -> str:
         if self.IsOpened():
-            return self._rcon.SvPrintCon(msg, target, tryAgain=tryAgain)
+            if getattr(self, "is_extended", False):
+                return self._rcon.SvPrintCon(msg, target, tryAgain=tryAgain)
+            else:
+                if str(target).lower() == "all":
+                    return self.Say(msg, tryAgain=tryAgain)
+                else:
+                    targets = str(target).split(",")
+                    res = None
+                    for t in targets:
+                        t = t.strip()
+                        if t.isdigit():
+                            res = self.SvTell(int(t), msg, tryAgain=tryAgain)
+                    return res
         return None
 
     def SvCenterPrint(self, msg : str, len : int = 1) -> str:
         if self.IsOpened():
-            return self._rcon.SvCenterPrint(msg, len)
+            if getattr(self, "is_extended", False):
+                return self._rcon.SvCenterPrint(msg, len)
+            else:
+                return self.SvSay(msg)
         return None
 
     def ClientCenterPrint(self, pid : int, msg : str, len : int = 1) -> str:
         if self.IsOpened():
-            return self._rcon.ClientCenterPrint(pid, msg, len)
+            if getattr(self, "is_extended", False):
+                return self._rcon.ClientCenterPrint(pid, msg, len)
+            else:
+                return self.SvTell(pid, msg)
+        return None
 
     def UnmarkTK(self, player_id : int) -> str:
         if self.IsOpened():

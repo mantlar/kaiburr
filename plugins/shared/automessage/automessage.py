@@ -98,13 +98,15 @@ class Automessage():
                 target_str = ",".join(target_ids)
                 self._serverData.interface.SvPrint(self.config.cfg["prefix"] + message, target_str)
         else:
-            self._serverData.interface.SvSay(self.config.cfg["prefix"] + message);
+            if not self._silenced_players:
+                self._serverData.interface.SvSay(self.config.cfg["prefix"] + message)
+            else:
+                # Fallback on non-extended server: whisper to each non-silenced player individually
+                for cl in self._serverData.API.GetAllClients():
+                    if cl.GetId() not in self._silenced_players:
+                        self._serverData.interface.SvTell(cl.GetId(), self.config.cfg["prefix"] + message)
 
     def HandleSilenceCommand(self, eventClient, teamId, cmdArgs):
-        if not self._serverData.is_extended:
-            self._serverData.interface.SvTell(eventClient.GetId(), "^1Error: ^7Server is not extended, this feature is unavailable.")
-            return True
-        
         client_id = eventClient.GetId()
         if client_id in self._silenced_players:
             del self._silenced_players[client_id]

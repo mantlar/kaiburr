@@ -50,7 +50,9 @@ class RoundBettingPlugin:
         }
         
         self._smodCommandList = {
-            ("betopen",): ("!betopen - Force-open the betting window (Admin)", self.cmd_betopen)
+            ("betopen",): ("!betopen - Force-open the betting window (Admin)", self.cmd_betopen),
+            ("setwinner", "roundwinner"): ("!setwinner <red|blue|draw> - Manually resolve round winner (Admin)", self.cmd_setwinner),
+            ("refundbets",): ("!refundbets - Cancel and refund all active bets (Admin)", self.cmd_refundbets),
         }
 
     def say(self, message):
@@ -169,6 +171,34 @@ class RoundBettingPlugin:
         self.open_betting()
         return True
 
+    def cmd_refundbets(self, playerName, smodID, adminIP, args):
+        self.say("^1[ADMIN] ^7Cancelling and refunding all active bets...")
+        self.refund_bets()
+        self.betting_state = "CLOSED"
+        return True
+
+    def cmd_setwinner(self, playerName, smodID, adminIP, args):
+        if len(args) < 2:
+            self.say("Usage: !setwinner <red|blue|draw>")
+            return True
+        winner = args[1].strip().upper()
+        if winner not in ("RED", "BLUE", "DRAW"):
+            self.say("Invalid team! Must be RED, BLUE, or DRAW.")
+            return True
+
+        if winner == "DRAW":
+            self.say("^1[ADMIN] ^7Declared round as DRAW. Refunding bets.")
+            self.betting_state = "CLOSED"
+            self.refund_bets()
+            self.open_betting()
+        else:
+            team_color = "^1" if winner == "RED" else "^4"
+            self.say(f"^1[ADMIN] ^7Declared round winner: {team_color}{winner}^7.")
+            self.betting_state = "CLOSED"
+            self.calculate_payouts(winner)
+            self.open_betting()
+        return True
+
     def calculate_payouts(self, winner_team):
         winner_team = re.sub(r'\^[0-9a-zA-Z]', '', winner_team).strip().upper()
         if not self.active_bets:
@@ -257,6 +287,8 @@ def OnStart():
         serverData = PluginInstance.serverData
         
         PluginInstance.say("RoundBetting plugin started.")
+        if not getattr(serverData, "is_extended", False):
+            Log.warning("[RoundBetting] Server is not running extended build (sv_extended). Automatic RoundWinner detection is disabled; bets will timeout after 45s unless resolved via !setwinner.")
         PluginInstance.open_betting()
         
         # Register chat commands
@@ -322,6 +354,20 @@ def OnLoop():
                 red_ratio = f"{total_pool / red_pool:.1f}x" if red_pool > 0 else "N/A"
                 blue_ratio = f"{total_pool / blue_pool:.1f}x" if blue_pool > 0 else "N/A"
                 inst.console_say(f"^3Betting is now CLOSED. ^7Pools - ^1RED: {red_pool} ({red_ratio}) ^7| ^4BLUE: {blue_pool} ({blue_ratio})")
+
+    # Fallback timeout for non-extended servers: if in RESOLVING state for > 45s, refund and re-open
+    if inst.betting_state == "RESOLVING" and not getattr(inst.serverData, "is_extended", False):
+        if not hasattr(inst, "_resolving_start_time") or inst._resolving_start_time is None:
+            inst._resolving_start_time = now
+        elif now - inst._resolving_start_time >= 45:
+            Log.warning("[RoundBetting] Non-extended server resolving timeout reached (45s). Refunding bets.")
+            inst.say("^3Could not detect round winner (non-extended server). Bets refunded.")
+            inst.refund_bets()
+            inst.betting_state = "CLOSED"
+            inst._resolving_start_time = None
+            inst.open_betting()
+    else:
+        inst._resolving_start_time = None
     
     return True
 
@@ -347,20 +393,19 @@ def OnEvent(event):
     }
     event_name = EVENT_NAMES.get(event_type, f"UNKNOWN({event_type})")
     
-    # # Log important events (not every message/clientchanged/player_spawn)
-    # if event_type in (2, 3, 7, 9, 10, 23):
-    #     Log.info(f"[RoundBetting] OnEvent: {event_name} (isStartup={is_startup}) | current_state={inst.betting_state}")
-    
     # Ignore events generated from parsing old logs during server startup
     if is_startup:
         return False
         
     # Handle InitGame (start of map / restart / next round starts)
-    # Enter RESOLVING state and wait for the engine's RoundWinner: line.
-    # No timeout needed — the engine guarantees exactly one RoundWinner: per round end.
     if event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_INIT:
-        # Log.info(f"[RoundBetting] >>> InitGame received. State: {inst.betting_state} -> RESOLVING")
-        if inst.betting_state == "OPEN":
+        if inst.betting_state == "RESOLVING" and inst.active_bets:
+            # Fallback if new round inits while still resolving previous round without winner
+            Log.warning("[RoundBetting] New round initialized while still resolving previous bets. Refunding active bets.")
+            inst.say("^3New round started without winner confirmation. Active bets have been refunded.")
+            inst.refund_bets()
+            inst.betting_state = "CLOSED"
+        elif inst.betting_state == "OPEN":
             inst.betting_window_timer.Finish()
         inst.betting_state = "RESOLVING"
         

@@ -98,14 +98,21 @@ class MultikillPlugin:
         broadcast = self._config.cfg.get("broadcast", False)
         
         interface = self._serverData.interface
+        is_extended = getattr(self._serverData, "is_extended", False)
         if broadcast:
             if msg:
-                interface.SvCenterPrint(msg, 2)
+                if is_extended:
+                    interface.SvCenterPrint(msg, 2)
+                else:
+                    interface.SvSay(msg)
             if sound:
                 interface.SvSound(sound)
         else:
             if msg:
-                interface.ClientCenterPrint(client_id, msg, 2)
+                if is_extended:
+                    interface.ClientCenterPrint(client_id, msg, 2)
+                else:
+                    interface.SvTell(client_id, msg)
             if sound:
                 interface.ClientSound(sound, client_id)
 
