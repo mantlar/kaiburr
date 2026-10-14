@@ -1,7 +1,9 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app/kaiburr
 
@@ -18,19 +20,23 @@ RUN dpkg --add-architecture i386 && \
         zlib1g:i386 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy core requirements and install them into a container virtual environment
-COPY requirements.txt ./
-RUN python3 -m venv /app/kaiburr/venv && \
-    /app/kaiburr/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /app/kaiburr/venv/bin/pip install --no-cache-dir -r requirements.txt
+# Create virtual environment in /opt/venv (isolated from /app/kaiburr)
+RUN python3 -m venv /opt/venv && \
+    pip install --no-cache-dir --upgrade pip
+
+# Pre-install core requirements
+COPY requirements.txt /app/kaiburr/
+RUN pip install --no-cache-dir -r /app/kaiburr/requirements.txt
 
 # Copy Kaiburr codebase
 COPY . /app/kaiburr
 
-# Discover and install all plugin requirements into the virtual environment
+# Symlink /opt/venv to /app/kaiburr/venv so kaiburr.sh finds venv/bin/activate
+RUN ln -sfn /opt/venv /app/kaiburr/venv
+
+# Install all plugin requirements into the virtual environment
 RUN python3 -c "import os, subprocess; \
-    venv_pip = '/app/kaiburr/venv/bin/pip'; \
-    [subprocess.run([venv_pip, 'install', '--no-cache-dir', '-r', os.path.join(r, 'requirements.txt')]) \
+    [subprocess.run(['pip', 'install', '--no-cache-dir', '-r', os.path.join(r, 'requirements.txt')]) \
      for r, _, f in os.walk('plugins') if 'requirements.txt' in f]"
 
 # Ensure scripts are executable
