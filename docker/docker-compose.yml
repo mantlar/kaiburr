@@ -6,15 +6,25 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: kaiburr_server
-    volumes:
-      # Mount Jedi Academy base installation
-      - ../../dockerize:/app/jediacademy
-      # Mount kaiburr source code
-      - ..:/app/jediacademy/gamedata/kaiburr
-      # Mount persistent config storage (overlays specific config files)
-      - ../../configstore_kaiburr:/app/jediacademy/gamedata/kaiburr
+    restart: unless-stopped
     ports:
+      # Movie Battles II Game Server (UDP) & RCON (TCP)
       - "29070:29070/udp"
       - "29070:29070/tcp"
-    restart: unless-stopped
+      # Kaiburr WebAdmin Portal
+      - "6767:6767/tcp"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount your host MBII server directory into the container
+      # Adjust the host path on the left to point to your mb2server folder:
+      - ../../mb2server:/app/mb2server
+      # Mount Kaiburr code for live development/edits
+      - ..:/app/kaiburr
+      # Isolate the container's Linux virtual environment from host OS mounts
+      - kaiburr_venv:/app/kaiburr/venv
+    stdin_open: true
     tty: true
+
+volumes:
+  kaiburr_venv:

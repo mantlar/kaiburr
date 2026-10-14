@@ -125,17 +125,17 @@ class MultikillPlugin:
             killer = event.client
             victim = event.victim
             if killer and victim:
-                self._HandleKill(killer.GetID(), victim.GetID())
+                self._HandleKill(killer.GetId(), victim.GetId())
 
         elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_CLIENTDISCONNECT:
             cl = event.client
             if cl:
-                self.ResetStreak(cl.GetID())
+                self.ResetStreak(cl.GetId())
 
         elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_PLAYER_SPAWN:
             cl = event.client
             if cl:
-                self.ResetStreak(cl.GetID())
+                self.ResetStreak(cl.GetId())
 
         elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_MAPCHANGE:
             self._streaks.clear()

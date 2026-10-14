@@ -4,24 +4,31 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Get the kaiburr root directory (parent of docker/)
 KAIBURR_DIR="$(dirname "$SCRIPT_DIR")"
-# Get the parent of kaiburr (where dockerize should be)
+# Parent directory (usually where mb2server resides)
 PARENT_DIR="$(dirname "$KAIBURR_DIR")"
 
 IMAGE_NAME="kaiburr"
 
-echo "Building Docker image..."
-docker build -f "$SCRIPT_DIR/Dockerfile" -t $IMAGE_NAME "$KAIBURR_DIR"
+echo "Building Docker image ($IMAGE_NAME)..."
+docker build -f "$SCRIPT_DIR/Dockerfile" -t "$IMAGE_NAME" "$KAIBURR_DIR"
 
 if [ $? -ne 0 ]; then
-  echo "Docker build failed! Exiting."
+  echo "[ERROR] Docker build failed! Exiting."
   exit 1
 fi
 
-# Ensure Jedi Academy & Moviebattles II is installed in $PARENT_DIR/dockerize
+echo "[OK] Build complete. Starting container..."
+# Auto-detect MBII server folder or fallback to parent
+SERVER_DIR="$PARENT_DIR"
+if [ -d "$PARENT_DIR/mb2server" ]; then
+  SERVER_DIR="$PARENT_DIR/mb2server"
+fi
 
-echo "Running Docker container..."
 docker run --rm -it \
-    -v "$PARENT_DIR/dockerize:/app/jediacademy" \
-    -v "$KAIBURR_DIR:/app/jediacademy/gamedata/kaiburr" \
-    -v "$PARENT_DIR/configstore_kaiburr:/app/jediacademy/gamedata/kaiburr/data" \
-    $IMAGE_NAME "$@"
+    -p 29070:29070/udp \
+    -p 29070:29070/tcp \
+    -p 6767:6767/tcp \
+    -v "$SERVER_DIR:/app/mb2server" \
+    -v "$KAIBURR_DIR:/app/kaiburr" \
+    -v kaiburr_venv:/app/kaiburr/venv \
+    "$IMAGE_NAME" "$@"

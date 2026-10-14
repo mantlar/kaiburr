@@ -1,45 +1,35 @@
+# Git & IDE files
+.git/
+.vscode/
+*.code-workspace
+.DS_Store
+
+# Virtual environment & byte-compiled Python
+venv/
+__pycache__/
+*.py[cod]
+
+# Logs & temporary files
+*.log
+tmp/
+temp/
+temporary/
+
+# Ignored archives and backups
+*.bak
+*.zip
+*.pkl
+*.pk3
+
+# Private and deployment folders
 lib/private/*
 !lib/private/.keep
 plugins/private/*
 !plugins/private/.keep
-
-tmp/*
-temp/*
-temporary/*
-
 update/deploy/*
 !update/deploy/.keep
 update/key/*
 !update/key/.keep
 
-*.code-workspace
-
-*.json
-*.cfg
-*.env
-*.pyc
-__pycache__/*
-*.log
-
-!start/autostart.cfg
-
-godfingerCfg.json
-automessageCfg.json
-vpnmonitorCfg.json
-automodCfg.json
-gtConfig.json
-
-*.db
-*.DB
-
-ignored/*
-venv/*
+# Docker internal folder
 docker/
-data/
-
-.DS_Store
-
-*.pkl
-*.pk3
-*.zip
-*.bak

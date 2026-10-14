@@ -1,22 +1,45 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    KAIBURR_HOME=/app/jediacademy/gamedata/kaiburr
+    DEBIAN_FRONTEND=noninteractive
 
-WORKDIR ${KAIBURR_HOME}
+WORKDIR /app/kaiburr
 
-RUN apt-get update && apt-get install -y \
-    git \
-    sqlite3 \
-    bash \
+# Install system utilities + 32-bit libraries required by OpenJK/mbiided.i386
+RUN dpkg --add-architecture i386 && \
+    apt-get update && apt-get install -y --no-install-recommends \
+        bash \
+        curl \
+        git \
+        sqlite3 \
+        build-essential \
+        libc6:i386 \
+        libstdc++6:i386 \
+        zlib1g:i386 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . ${KAIBURR_HOME}
+# Copy core requirements and install them into a container virtual environment
+COPY requirements.txt ./
+RUN python3 -m venv /app/kaiburr/venv && \
+    /app/kaiburr/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /app/kaiburr/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-RUN chmod +x quickstart_linux_macOS.sh prepare/linux_macOS/prepare.sh
+# Copy Kaiburr codebase
+COPY . /app/kaiburr
 
-CMD bash -c '\
-  if [ ! -f .prepared ]; then \
-    ./prepare/linux_macOS/prepare.sh && touch .prepared; \
-  fi && \
-  ./quickstart_linux_macOS.sh'
+# Discover and install all plugin requirements into the virtual environment
+RUN python3 -c "import os, subprocess; \
+    venv_pip = '/app/kaiburr/venv/bin/pip'; \
+    [subprocess.run([venv_pip, 'install', '--no-cache-dir', '-r', os.path.join(r, 'requirements.txt')]) \
+     for r, _, f in os.walk('plugins') if 'requirements.txt' in f]"
+
+# Ensure scripts are executable
+RUN chmod +x /app/kaiburr/kaiburr.sh
+
+# Ports:
+# 29070/udp - JKA / MBII Dedicated Server
+# 29070/tcp - RCON
+# 6767/tcp  - Kaiburr WebAdmin portal
+EXPOSE 29070/udp 29070/tcp 6767/tcp
+
+CMD ["/app/kaiburr/kaiburr.sh"]

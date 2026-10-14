@@ -435,7 +435,15 @@ class MBIIServer:
         self._serverData.name = ""
         self._serverData.version = ""
         self._serverData.gameType = ""
+        
+        # Clear transient round/session vars but preserve plugin registrations (commands for !help)
+        saved_commands = self._serverData.serverVars.get("registeredCommands")
+        saved_smod = self._serverData.serverVars.get("registeredSmodCommands")
         self._serverData.serverVars.clear()
+        if saved_commands is not None:
+            self._serverData.serverVars["registeredCommands"] = saved_commands
+        if saved_smod is not None:
+            self._serverData.serverVars["registeredSmodCommands"] = saved_smod
 
         Log.info("Session state flushed successfully.")
 

@@ -38,7 +38,7 @@ fi
 
 # Launch core_launcher.py using the virtual environment's python
 echo "[*] Launching Kaiburr Core..."
-"venv/bin/python" core_launcher.py
+"venv/bin/python" core_launcher.py "$@"
 
 if [ $? -ne 0 ]; then
     echo ""
