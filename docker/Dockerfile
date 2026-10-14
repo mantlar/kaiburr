@@ -15,6 +15,7 @@ RUN dpkg --add-architecture i386 && \
         git \
         sqlite3 \
         build-essential \
+        procps \
         libc6:i386 \
         libstdc++6:i386 \
         zlib1g:i386 \

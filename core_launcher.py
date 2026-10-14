@@ -309,9 +309,11 @@ def autostart_server(config):
     if os.name == "nt":
         subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE, cwd=server_path)
     else:
-        subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True, cwd=server_path)
+        console_log_path = os.path.join(server_path, "mbiided_console.log")
+        console_log = open(console_log_path, "a")
+        subprocess.Popen(args, stdout=console_log, stderr=console_log, stdin=subprocess.DEVNULL, start_new_session=True, cwd=server_path)
         
-    time.sleep(3)
+    time.sleep(5)
 
 def main():
     config_file = CONFIG_PATH
