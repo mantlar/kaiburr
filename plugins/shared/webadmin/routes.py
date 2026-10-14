@@ -225,10 +225,13 @@ async def handle_events_sse(request):
                 event = await asyncio.wait_for(client_queue.get(), timeout=30)
                 event_data = json.dumps(event)
                 await response.write(f"data: {event_data}\n\n".encode("utf-8"))
-            except asyncio.TimeoutError:
+            except (asyncio.TimeoutError, TimeoutError):
                 # Send keepalive comment to prevent timeout
-                await response.write(b": keepalive\n\n")
-            except (ConnectionResetError, ConnectionAbortedError):
+                try:
+                    await response.write(b": keepalive\n\n")
+                except Exception:
+                    break
+            except (ConnectionResetError, ConnectionAbortedError, Exception):
                 break
     except asyncio.CancelledError:
         pass

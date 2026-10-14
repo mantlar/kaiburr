@@ -80,7 +80,6 @@ DEFAULT_CFG = None
 
 # Fallback configuration if config file doesn't exist
 CONFIG_FALLBACK = '''{
-    "MBIIPath": "your/mbii/path/here",
     "pluginThemeColor": "green",
     "MessagePrefix": "[RTV]^7: ",
     "RTVPrefix": "!",

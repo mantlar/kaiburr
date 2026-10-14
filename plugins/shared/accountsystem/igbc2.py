@@ -54,7 +54,6 @@ CONFIG_FALLBACK = \
         "enabled": false,
         "credits": 10
     },
-    "MBIIPath": "your/mbii/path/here",
     "siegeteamBanList": [],
     "siegeteamBanListIsWhitelist": false,
     "priceOverride": {},
@@ -256,10 +255,11 @@ class SiegeTeam:
     def __str__(self):
         return f"{self._name}"
 
-def GetAllTeams() -> list[SiegeTeam]:
+def GetAllTeams(mbiiDir: str = None) -> list[SiegeTeam]:
     """Scan PK3 files in MBII directories to discover available teams"""
-    mbiiDir = os.path.abspath(DEFAULT_CFG.cfg["MBIIPath"])
-    if not os.path.exists(mbiiDir):
+    if mbiiDir:
+        mbiiDir = os.path.abspath(mbiiDir)
+    if not mbiiDir or not os.path.exists(mbiiDir):
         Log.info("Attempting to find MBII directory relative to the current working directory...")
         searchDir = os.getcwd()
         while True:
@@ -299,8 +299,6 @@ class BankingPlugin:
 
         # START OF MODIFIED CODE FOR CONFIG LOADING
         # Check if config loading failed and use fallback data
-        if DEFAULT_CFG is None or DEFAULT_CFG.cfg.get("MBIIPath") in [None, "your/mbii/path/here"]:
-            Log.error("MBIIPath is not configured in bankingConfig.yaml. The GetAllTeams function will not work.")
         if DEFAULT_CFG is None:
             Log.warning("Default config failed to load from file. Using fallback configuration.")
             # Create a minimal mock config object to prevent AttributeError: 'NoneType' object has no attribute 'cfg'
@@ -331,7 +329,7 @@ class BankingPlugin:
         self.player_rounds : dict[int, int] = {}  # player_id: rounds_played
         self.player_class_by_pid : dict[int, str] = {}  # player_id: current character/class name
         self.players_awarded_this_round = set()
-        self.team_container = SiegeTeamContainer(GetAllTeams(), self)
+        self.team_container = SiegeTeamContainer(GetAllTeams(self.server_data.mbiiPath), self)
         self._register_commands()
         # self.initialize_banking_table()
 

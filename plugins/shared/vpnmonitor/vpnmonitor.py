@@ -123,6 +123,17 @@ class VPNMonitor():
                 Log.debug("IP %s matches whitelist entry %s, skipping VPN check.", ip, str(entry));
                 return -1;
     
+        try:
+            parsed_ip = ipaddress.ip_address(ip)
+            if parsed_ip.is_private or parsed_ip.is_loopback:
+                Log.debug("IP %s is private/local, skipping VPN check.", ip)
+                return -1
+        except Exception:
+            pass
+
+        if self.config.cfg.get("apikey") in ["your_api_key", "", None]:
+            return -1
+
         Log.debug("Getting vpn associated with ip address %s", ip);
         existing = self._database.ExecuteQuery("SELECT vpn FROM iplist WHERE ip=\""+ip+"\"", True);
         vpnType = -1;
