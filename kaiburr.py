@@ -627,9 +627,7 @@ class MBIIServer:
                         if IsWindows:
                             subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE, cwd=server_path)
                         else:
-                            console_log_path = os.path.join(server_path, "mbiided_console.log")
-                            console_log = open(console_log_path, "a")
-                            subprocess.Popen(args, stdout=console_log, stderr=console_log, stdin=subprocess.DEVNULL, start_new_session=True, cwd=server_path)
+                            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True, cwd=server_path)
                         Log.info("Watchdog: MB2 server restart command executed successfully")
                     except Exception as e:
                         Log.error(f"Watchdog: Failed to restart MB2 server: {e}")
@@ -758,19 +756,6 @@ class MBIIServer:
                     return
                 else:
                     Log.debug("Running in debug mode and server is offline, consider server data invalid.")
-            else:
-                # Give server process time to finish loading PK3s/map and bind RCON port
-                Log.info(f"Checking MB2 dedicated server '{sv_fname}' readiness...")
-                server_online = False
-                for attempt in range(25):
-                    statusStr = self._primarySvInterface.Status()
-                    if statusStr is not None and len(statusStr.strip()) > 0:
-                        server_online = True
-                        Log.info("MB2 server is online and responding to RCON!")
-                        break
-                    time.sleep(1)
-                if not server_online:
-                    Log.warning("MB2 server did not respond to RCON after 25s (it may still be loading or starting up).")
 
             # Use primary interface for CvarManager
             if not self._cvarManager.Initialize():

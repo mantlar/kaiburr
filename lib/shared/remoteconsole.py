@@ -170,9 +170,6 @@ class RCON(object):
                             result = self._PopUnread();
                             #print("Result from request %s"%result);
                             isOk = True;
-                    except ConnectionRefusedError:
-                        # Server socket is not listening yet (server still booting or restarting)
-                        break;
                     except Exception as ex:
                         print("Exception at Request in rcon %s" %str(ex));
                         break;
