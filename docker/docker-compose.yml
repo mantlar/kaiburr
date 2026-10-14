@@ -9,14 +9,17 @@ services:
       # Movie Battles II Game Server (UDP) & RCON (TCP)
       - "29070:29070/udp"
       - "29070:29070/tcp"
+      # Kaiburr Realtime UDP Event Emitter
+      - "29071:29071/udp"
       # Kaiburr WebAdmin Portal
       - "6767:6767/tcp"
     environment:
       - PYTHONUNBUFFERED=1
+      - SERVER_PATH=/server
+      - MBII_PATH=/server/MBII
     volumes:
-      # Mount your host MBII server directory into the container
-      # Adjust the host path on the left to point to your mb2server folder:
-      - ../../mb2server:/app/mb2server
+      # Mount the host MBII dedicated server directory to /server
+      - ../../..:/server
       # Mount Kaiburr code for live development/edits
       - ..:/app/kaiburr
       # Isolate the container's Linux virtual environment from host OS mounts

@@ -77,8 +77,9 @@ import lib.shared.observer as observer
 INVALID_ID = -1
 USERINFO_LEN = len("userinfo: ")
 
-CONFIG_DEFAULT_PATH = os.path.join(os.getcwd(),"kaiburrCfg.yaml")
-CONFIG_LEGACY_PATH = os.path.join(os.getcwd(),"kaiburrCfg.json")
+KAIBURR_ROOT = os.path.dirname(os.path.abspath(__file__))
+CONFIG_DEFAULT_PATH = os.path.join(KAIBURR_ROOT, "kaiburrCfg.yaml")
+CONFIG_LEGACY_PATH = os.path.join(KAIBURR_ROOT, "kaiburrCfg.json")
 # Things like port and ip can be omitted in future, since this thing is supposed to be sharing the filesystem with the server, it could read it's config for credentials.
 CONFIG_FALLBACK = \
 """Name: "MBII Kaiburr : Consequential Success"
@@ -195,6 +196,65 @@ class MBIIServer:
         return True
 
 
+    def _autoDetectPaths(self):
+        # 1. Check standard container mounts
+        for std_path in ["/server", "/app/server"]:
+            if os.path.exists(std_path):
+                candidates = ["mbiided.i386", "openjkded.i386", "mbiided.x86.exe"]
+                if any(os.path.exists(os.path.join(std_path, c)) for c in candidates):
+                    mbii_cand = os.path.join(std_path, "MBII")
+                    if os.path.exists(mbii_cand):
+                        return std_path, mbii_cand
+
+        # 2. Walk up parent directories from KAIBURR_ROOT
+        current_dir = KAIBURR_ROOT
+        max_depth = 5
+        depth = 0
+        binary_names = ["mbiided.x86.exe", "openjkded.x86.exe"] if IsWindows else ["mbiided.i386", "openjkded.i386"]
+        while depth < max_depth:
+            if any(os.path.exists(os.path.join(current_dir, b)) for b in binary_names):
+                mbii_path = os.path.join(current_dir, "MBII")
+                if os.path.exists(mbii_path):
+                    return current_dir, mbii_path
+            parent = os.path.dirname(current_dir)
+            if parent == current_dir:
+                break
+            current_dir = parent
+            depth += 1
+        return None, None
+
+    def _resolvePaths(self):
+        if not self._config or not self._config.cfg:
+            return
+
+        # 1. Environment variable overrides (e.g. Docker / Pterodactyl)
+        env_server = os.environ.get("SERVER_PATH") or os.environ.get("MBII_SERVER_PATH")
+        env_mbii = os.environ.get("MBII_PATH")
+        if env_server and os.path.exists(env_server):
+            self._config.cfg["serverPath"] = env_server
+        if env_mbii and os.path.exists(env_mbii):
+            self._config.cfg["MBIIPath"] = env_mbii
+
+        server_path = self._config.cfg.get("serverPath")
+        mbii_path = self._config.cfg.get("MBIIPath")
+
+        # 2. Expand relative paths
+        if server_path and not os.path.isabs(server_path) and server_path != "your/path/here/":
+            self._config.cfg["serverPath"] = os.path.abspath(os.path.join(KAIBURR_ROOT, server_path))
+            server_path = self._config.cfg["serverPath"]
+
+        if mbii_path and not os.path.isabs(mbii_path) and mbii_path != "your/path/here/":
+            self._config.cfg["MBIIPath"] = os.path.abspath(os.path.join(KAIBURR_ROOT, mbii_path))
+            mbii_path = self._config.cfg["MBIIPath"]
+
+        # 3. Fallback auto-detection if configured paths do not exist on current filesystem
+        if not server_path or not os.path.exists(server_path) or not mbii_path or not os.path.exists(mbii_path):
+            detected_server, detected_mbii = self._autoDetectPaths()
+            if detected_server and detected_mbii:
+                Log.info(f"Configured paths not found on disk. Auto-resolved server to '{detected_server}' and MBII to '{detected_mbii}'.")
+                self._config.cfg["serverPath"] = detected_server
+                self._config.cfg["MBIIPath"] = detected_mbii
+
     def GetStatus(self):
         return self._status
 
@@ -232,6 +292,9 @@ class MBIIServer:
             Log.error("Failed to load Kaiburr config.")
             self._status = MBIIServer.STATUS_CONFIG_ERROR
             return
+
+        # Resolve paths dynamically (supports env vars, relative paths, container mounts, and auto-detection fallback)
+        self._resolvePaths()
 
         if not self.ValidateConfig(self._config):
             Log.error("Kaiburr config validation failed.")

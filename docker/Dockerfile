@@ -48,4 +48,4 @@ RUN chmod +x /app/kaiburr/kaiburr.sh
 # 6767/tcp  - Kaiburr WebAdmin portal
 EXPOSE 29070/udp 29070/tcp 6767/tcp
 
-CMD ["/app/kaiburr/kaiburr.sh"]
+CMD ["bash", "/app/kaiburr/kaiburr.sh"]

@@ -86,6 +86,23 @@ def setup_environment():
     check_msvc()
 
 def auto_detect_paths():
+    # 1. Check environment variables (Docker / Container / Pterodactyl support)
+    env_server = os.environ.get("SERVER_PATH") or os.environ.get("MBII_SERVER_PATH")
+    env_mbii = os.environ.get("MBII_PATH")
+    if env_server and os.path.exists(env_server):
+        mbii_dir = env_mbii if (env_mbii and os.path.exists(env_mbii)) else os.path.join(env_server, "MBII")
+        return env_server, mbii_dir
+
+    # 2. Check standard container mount locations
+    for std_path in ["/server", "/app/server"]:
+        if os.path.exists(std_path):
+            candidates = ["mbiided.i386", "openjkded.i386", "mbiided.x86.exe"]
+            if any(os.path.exists(os.path.join(std_path, c)) for c in candidates):
+                mbii_cand = os.path.join(std_path, "MBII")
+                if os.path.exists(mbii_cand):
+                    return std_path, mbii_cand
+
+    # 3. Walk up parent directories from KAIBURR_ROOT
     current_dir = KAIBURR_ROOT
     max_depth = 5
     depth = 0
@@ -243,11 +260,29 @@ def autostart_server(config):
         return
         
     server_path = config.get("serverPath", "")
-    full_path = os.path.join(server_path, server_file)
+    # Check env var override
+    env_server = os.environ.get("SERVER_PATH") or os.environ.get("MBII_SERVER_PATH")
+    if env_server and os.path.exists(env_server):
+        server_path = env_server
+        config["serverPath"] = env_server
+
+    # Expand relative path if applicable
+    if server_path and not os.path.isabs(server_path) and server_path != "your/path/here/":
+        server_path = os.path.abspath(os.path.join(KAIBURR_ROOT, server_path))
+
+    full_path = os.path.join(server_path, server_file) if server_path else ""
     
-    if not os.path.exists(full_path):
-        print(f"[ERROR] Autostart failed. Could not find server at {full_path}")
-        return
+    if not server_path or not os.path.exists(full_path):
+        detected_server, detected_mbii = auto_detect_paths()
+        if detected_server and os.path.exists(os.path.join(detected_server, server_file)):
+            print(f"[*] Server path '{server_path}' not found on disk. Auto-detected server at '{detected_server}'.")
+            server_path = detected_server
+            config["serverPath"] = detected_server
+            config["MBIIPath"] = detected_mbii
+            full_path = os.path.join(server_path, server_file)
+        else:
+            print(f"[ERROR] Autostart failed. Could not find server at {full_path}")
+            return
         
     if os.name != 'nt':
         try:

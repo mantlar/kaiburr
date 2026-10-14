@@ -281,6 +281,8 @@ def GetAllTeams(mbiiDir: str = None) -> list[SiegeTeam]:
     team_list = []
     dirsToProcess = [mbiiDir, os.path.normpath(os.path.join(mbiiDir, "../base"))];
     for sub_dir in dirsToProcess:
+        if not sub_dir or not os.path.exists(sub_dir):
+            continue
         for filename in os.listdir(sub_dir):
             if filename.endswith(".pk3"):
                 try:
