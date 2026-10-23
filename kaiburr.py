@@ -745,6 +745,92 @@ class MBIIServer:
             self._primarySvInterface.SvSay("^1 {text}.".format(text = "Kaiburr Restarting procedure started, ETA %s"%self._restartTimeout.LeftDHMS()))
             Log.info("Restart issued, proceeding.")
 
+    def _LaunchServerProcess(self) -> bool:
+        """Launches the dedicated server executable based on configuration."""
+        server_path = self._config.cfg.get("serverPath", "")
+        server_file = self._config.cfg.get("serverFileName", "")
+        full_path = os.path.join(server_path, server_file)
+
+        if not os.path.exists(full_path):
+            Log.error(f"Cannot launch server: executable not found at {full_path}")
+            return False
+
+        rcon_cfg = self._config.cfg.get("interfaces", {}).get("rcon", {})
+        remotes = rcon_cfg.get("Remotes", [])
+        log_file = self._config.cfg.get("logFilename", "server.log")
+        port = "29070"
+
+        if remotes:
+            port = str(remotes[0].get("port", 29070))
+            log_file = remotes[0].get("logFilename", log_file)
+
+        args = [
+            full_path,
+            "--debug",
+            "+set", "g_log", log_file,
+            "+set", "g_logExplicit", "3",
+            "+set", "g_logClientInfo", "1",
+            "+set", "g_logSync", "4",
+            "+set", "com_logChat", "2",
+            "+set", "dedicated", "2",
+            "+set", "fs_game", "MBII",
+            "+exec", "server.cfg",
+            "+set", "net_port", port
+        ]
+
+        Log.info(f"Launching server process: {full_path} on port {port}")
+        try:
+            if IsWindows:
+                subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE, cwd=server_path)
+            else:
+                subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True, cwd=server_path)
+            return True
+        except Exception as e:
+            Log.error(f"Failed to launch server process: {e}")
+            return False
+
+    def RestartServerProcess(self) -> bool:
+        """Restarts the MB2 dedicated server process (mbiided)."""
+        Log.info("RestartServerProcess requested.")
+        try:
+            # 1. Send announcement to players
+            if self._primarySvInterface and self._primarySvInterface.IsOpened():
+                try:
+                    self._primarySvInterface.SvSay("^1[SERVER] ^7Restarting server process...")
+                except Exception:
+                    pass
+                time.sleep(0.5)
+
+                # 2. Tell the server process to quit cleanly via RCON
+                try:
+                    if hasattr(self._primarySvInterface, "_rcon"):
+                        self._primarySvInterface._rcon.Request(
+                            b"\xff\xff\xff\xffrcon %b quit" % self._primarySvInterface._rcon._password,
+                            tryAgain=False
+                        )
+                    elif hasattr(self._primarySvInterface, "Quit"):
+                        self._primarySvInterface.Quit()
+                except Exception as e:
+                    Log.warning(f"Could not send 'quit' command via server interface: {e}")
+
+            # 3. Give the process a moment to exit
+            time.sleep(2)
+
+            # 4. If watchdog is enabled with auto-restart, it will handle relaunching
+            watchdog_config = self._config.cfg.get("watchdog", {})
+            if watchdog_config.get("enabled", False) and watchdog_config.get("restartServer", False):
+                Log.info("Watchdog is active and configured to restart the server on process exit.")
+                return True
+
+            # 5. Otherwise, ensure process is launched directly
+            sv_fname = self._config.cfg.get("serverFileName", "mbiided.i386")
+            if sv_fname not in (p.name() for p in psutil.process_iter()):
+                return self._LaunchServerProcess()
+            return True
+        except Exception as e:
+            Log.error(f"Error in RestartServerProcess: {e}")
+            return False
+
     def Start(self):
         # a = 0/0
         try:
