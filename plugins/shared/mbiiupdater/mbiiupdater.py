@@ -181,7 +181,7 @@ class MBIIClientUpdater():
         try:
             Log.info("Checking for MBII updates...")
             result = subprocess.run(
-                ["dotnet", dll_path, "-c", "-path", game_path],
+                ["dotnet", "--roll-forward", "LatestMajor", dll_path, "-c", "-path", game_path],
                 capture_output=True,
                 text=True,
                 timeout=120
@@ -345,9 +345,9 @@ class MBIIClientUpdater():
             mbii_path = self.config.cfg["mbiiPath"]
 
             # Run the updater (without -c flag to actually apply)
-            Log.info(f"Running: dotnet {dll_path} -path {game_path}")
+            Log.info(f"Running: dotnet --roll-forward LatestMajor {dll_path} -path {game_path}")
             result = subprocess.run(
-                ["dotnet", dll_path, "-path", game_path],
+                ["dotnet", "--roll-forward", "LatestMajor", dll_path, "-path", game_path],
                 capture_output=True,
                 text=True,
                 timeout=600  # 10 minute timeout for the actual update
