@@ -12,3 +12,4 @@ class API():
         self.GetDatabase        = None
         self.GetPlugin          = None # plugName, returns plugin object ptr, None if not found
         self.Restart            = None
+        self.RestartServerProcess = None
