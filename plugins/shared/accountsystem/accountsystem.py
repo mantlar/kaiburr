@@ -197,8 +197,8 @@ class AccountManager:
         totp_secret = os.urandom(16).hex()
         esc_name = escape_sql_apostrophes(player_name)
         insert_query = f"""
-        INSERT INTO user_credentials (player_name, ip_address, last_login_ip, totp_secret)
-        VALUES ('{esc_name}', '{ip_address}', '{ip_address}', '{totp_secret}')
+        INSERT INTO user_credentials (player_name, ip_address, last_login_ip, totp_secret, last_login)
+        VALUES ('{esc_name}', '{ip_address}', '{ip_address}', '{totp_secret}', CURRENT_TIMESTAMP)
         """
         self.accounts_db.ExecuteQuery(insert_query)
         query = f"SELECT user_id FROM user_credentials WHERE player_name = '{esc_name}'"
