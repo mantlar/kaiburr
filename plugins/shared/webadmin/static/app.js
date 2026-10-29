@@ -254,8 +254,19 @@ function handleServerEvent(event) {
 
     switch (event.type) {
         case 'chat':
-            iconHtml = `<div class="feed-icon" style="color:var(--text-secondary)">💬</div>`;
-            contentHtml = `<div class="feed-content"><span class="feed-player">${escapeHtml(event.player)}</span>: ${escapeHtml(event.message)}</div>`;
+            if (event.team_id === 1) {
+                // Team Red (Good/Rebels)
+                iconHtml = `<div class="feed-icon" style="color:var(--danger)">💬</div>`;
+                contentHtml = `<div class="feed-content"><span class="feed-team-tag" style="color:var(--danger);font-weight:600;">[Red] </span><span class="feed-player" style="color:var(--danger)">${escapeHtml(event.player)}</span>: <span style="color:var(--danger)">${escapeHtml(event.message)}</span></div>`;
+            } else if (event.team_id === 2) {
+                // Team Blue (Evil/Empire)
+                iconHtml = `<div class="feed-icon" style="color:var(--info)">💬</div>`;
+                contentHtml = `<div class="feed-content"><span class="feed-team-tag" style="color:var(--info);font-weight:600;">[Blue] </span><span class="feed-player" style="color:var(--info)">${escapeHtml(event.player)}</span>: <span style="color:var(--info)">${escapeHtml(event.message)}</span></div>`;
+            } else {
+                // Global chat
+                iconHtml = `<div class="feed-icon" style="color:var(--text-secondary)">💬</div>`;
+                contentHtml = `<div class="feed-content"><span class="feed-player">${escapeHtml(event.player)}</span>: ${escapeHtml(event.message)}</div>`;
+            }
             break
         case 'kill':
             iconHtml = `<div class="feed-icon" style="color:var(--danger)">☠️</div>`;

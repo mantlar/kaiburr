@@ -289,7 +289,8 @@ def OnEvent(event) -> bool:
             "chat",
             player=colors.StripColorCodes(cl.GetName()),
             player_id=cl.GetId(),
-            message=colors.StripColorCodes(event.message)
+            message=colors.StripColorCodes(event.message),
+            team_id=event.teamId
         )
 
     elif event.type == kaiburrEvent.KAIBURR_EVENT_TYPE_KILL:
